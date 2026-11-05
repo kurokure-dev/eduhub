@@ -1,0 +1,8 @@
+# 줄바꿈을 LF로 통일한다 (Windows·Linux CI에서 같은 결과를 내고 Spotless 검사가 흔들리지 않게)
+* text=auto eol=lf
+
+# Windows 전용 스크립트는 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.jar binary

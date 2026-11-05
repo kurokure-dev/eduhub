@@ -1,0 +1,14 @@
+# 로컬 개발 프로필. 접속 정보는 환경 변수로 받고 저장소에 두지 않는다 (NFR-03, NFR-06)
+spring:
+  config:
+    # 저장소 루트의 .env가 있으면 읽는다 (backend 폴더에서 실행한다고 가정). 환경 변수가 있으면 환경 변수가 이긴다
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+logging:
+  level:
+    # NFR-02: 실행되는 SQL을 로그로 보고 N+1을 찾는다
+    org.hibernate.SQL: debug
