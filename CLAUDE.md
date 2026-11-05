@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 팀 규칙
+- 요구사항은 docs/requirements.md를 기준으로 한다 (결정 사항 D-xx 포함)
+- 백엔드 빌드·테스트: cd backend && ./gradlew test
+- 계층 규칙: Controller → Service → Repository. Controller에서 Repository 직접 호출 금지
+- 엔티티를 API 응답으로 그대로 반환하지 않는다 (DTO 사용)
+- 비밀 정보는 코드와 설정 파일에 쓰지 않는다. 환경 변수와 .env(커밋 금지)만 사용
+
 ## 프로젝트
 
 EduHub: 사내 교육과정 조회 및 수강 신청 시스템. 임직원이 회차에 신청하고, 정원이 차면 대기자로 등록된다.
