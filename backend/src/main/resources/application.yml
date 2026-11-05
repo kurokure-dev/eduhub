@@ -1,0 +1,22 @@
+# 모든 프로필 공통 설정. 환경별 값은 application-{profile}.yml에 둔다 (NFR-06)
+spring:
+  application:
+    name: eduhub
+  profiles:
+    # 프로필을 지정하지 않고 실행하면 로컬 개발(dev)로 뜬다
+    default: dev
+  jpa:
+    # NFR-02: 컨트롤러·뷰에서 지연 로딩이 일어나지 않게 막는다 (N+1을 숨기지 않기 위해)
+    open-in-view: false
+  mvc:
+    problemdetails:
+      # NFR-04: 오류 응답을 ProblemDetail(RFC 9457) 형식으로 통일한다
+      enabled: true
+
+springdoc:
+  # NFR-04: /api/** 경로의 API만 문서화한다
+  paths-to-match: /api/**
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

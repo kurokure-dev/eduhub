@@ -1,0 +1,9 @@
+# 테스트 프로필.
+# 1주차에는 엔티티가 없으므로 DB 없이 테스트가 돌도록 DB 관련 자동 설정을 끈다.
+# 엔티티가 생기면 PostgreSQL(Testcontainers)로 바꾼다. H2는 락 동작이 달라 NFR-01 검증에 쓰지 않는다.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
