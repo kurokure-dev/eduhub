@@ -8,6 +8,10 @@ spring:
   jpa:
     # NFR-02: 컨트롤러·뷰에서 지연 로딩이 일어나지 않게 막는다 (N+1을 숨기지 않기 위해)
     open-in-view: false
+    properties:
+      hibernate:
+        # SQL Server에서 한글을 저장하도록 문자열 컬럼을 NVARCHAR로 다룬다 (D-14)
+        use_nationalized_character_data: true
   mvc:
     problemdetails:
       # NFR-04: 오류 응답을 ProblemDetail(RFC 9457) 형식으로 통일한다

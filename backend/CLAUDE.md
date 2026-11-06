@@ -7,12 +7,12 @@ Spring Boot 3.5 백엔드 (Java 21, Gradle Kotlin DSL). 명령은 모두 `backen
 JDK 21이 필요하다. 이 PC에는 JDK 8·11도 있으므로 Java 버전 오류가 나면 `JAVA_HOME`이 `C:\Users\USER\.jdks\azul-21.0.13.0.3`을 가리키는지 확인한다.
 
 ```bash
-./gradlew test                                                        # 전체 테스트
+./gradlew test                                                        # 전체 테스트 (개발 DB 접속 필요)
 ./gradlew test --tests "com.example.eduhub.common.health.HealthControllerTest"   # 테스트 클래스 하나
 ./gradlew test --tests "*HealthControllerTest.healthReturnsUp"        # 테스트 메서드 하나
 ./gradlew spotlessCheck                                               # 포맷 검사
 ./gradlew spotlessApply                                               # 포맷 자동 정리
-./gradlew bootRun                                                     # 로컬 실행 (dev 프로필, PostgreSQL 필요)
+./gradlew bootRun                                                     # 로컬 실행 (dev 프로필, 개발 DB 접속 필요)
 ```
 
 - 작업을 마치기 전에 `./gradlew spotlessCheck test`를 통과시킨다. 포맷은 google-java-format(2칸 들여쓰기)이며 손으로 맞추지 말고 `./gradlew spotlessApply`를 쓴다
@@ -30,6 +30,7 @@ JDK 21이 필요하다. 이 PC에는 JDK 8·11도 있으므로 Java 버전 오�
 - 엔티티를 API 응답으로 그대로 반환하지 않는다 (DTO 사용)
 - `open-in-view: false`를 유지한다 (NFR-02, `src/main/resources/application.yml`)
 - DB 스키마 변경은 Flyway 마이그레이션(`src/main/resources/db/migration`)으로만 한다. 하위 호환되게 쓰고, 되돌릴 때는 새 마이그레이션으로 고친다
+- DB는 SQL Server다 (D-14). 마이그레이션은 T-SQL로 쓰고 문자열 컬럼은 `NVARCHAR`로 만든다. `ddl-auto: validate`라서 엔티티와 스키마가 어긋나면 기동과 테스트가 실패한다
 
 ## OpenAPI 규칙
 
@@ -41,4 +42,4 @@ JDK 21이 필요하다. 이 PC에는 JDK 8·11도 있으므로 Java 버전 오�
 
 - `application.yml`: 공통. 기본 프로필이 `dev`라서 프로필 없이 실행하면 dev로 뜬다
 - `application-dev.yml`: DB 접속 정보를 `DB_URL`·`DB_USERNAME`·`DB_PASSWORD` 환경 변수로 받는다. 루트 `.env`를 `optional:file:../.env[.properties]`로 읽으므로 `backend/`에서 실행해야 한다
-- `src/test/resources/application-test.yml`: DataSource·JPA·Flyway 자동 설정을 꺼서 DB 없이 테스트가 돈다. **엔티티를 추가하면 이 설정으로는 테스트가 깨진다.** 그때는 H2가 아니라 Testcontainers(PostgreSQL)로 바꾼다. H2는 락 동작이 달라 NFR-01(동시성) 검증에 쓸 수 없다
+- `src/test/resources/application-test.yml`: dev와 같은 `.env`로 개발 DB(SGY_EHUB)에 직접 연결한다 (D-15). `@DataJpaTest`에는 `@AutoConfigureTestDatabase(replace = NONE)`와 `@ActiveProfiles("test")`를 붙인다. 테스트는 롤백되지만, 새 마이그레이션은 테스트 실행만으로 개발 DB에 적용된다

@@ -7,6 +7,10 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # 스키마는 Flyway만 바꾼다. Hibernate는 엔티티와 스키마가 맞는지 검사만 한다
+      ddl-auto: validate
 
 logging:
   level:
