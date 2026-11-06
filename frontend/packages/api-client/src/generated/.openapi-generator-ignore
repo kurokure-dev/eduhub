@@ -1,0 +1,6 @@
+# 생성기가 만드는 파일 중 이 저장소에 필요 없는 것
+git_push.sh
+.gitignore
+.npmignore
+README.md
+docs/**
