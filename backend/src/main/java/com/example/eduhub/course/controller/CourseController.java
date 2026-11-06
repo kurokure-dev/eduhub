@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import java.util.Set;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +60,12 @@ public class CourseController {
       }
     }
     return courseQueryService.search(keyword, category, pageable);
+  }
+
+  @Operation(summary = "분류 목록 조회", description = "종료되지 않은 과정의 분류를 중복 없이 이름순으로 조회한다.")
+  @GetMapping("/categories")
+  public List<String> getCategories() {
+    return courseQueryService.getCategories();
   }
 
   @Operation(summary = "과정 상세 조회", description = "과정 정보와 모집 중인 회차를 일정순으로 조회한다.")

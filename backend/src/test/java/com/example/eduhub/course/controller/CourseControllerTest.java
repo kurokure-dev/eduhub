@@ -137,6 +137,18 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.detail").value("과정을 찾을 수 없습니다: 99"));
   }
 
+  @Test
+  @DisplayName("분류 목록은 문자열 배열로 돌려준다 (D-23)")
+  void getCategories() throws Exception {
+    given(courseQueryService.getCategories()).willReturn(List.of("개발", "리더십"));
+
+    mockMvc
+        .perform(get("/api/v1/courses/categories"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0]").value("개발"))
+        .andExpect(jsonPath("$[1]").value("리더십"));
+  }
+
   private Pageable capturePageable(String keyword, String category) {
     ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     verify(courseQueryService)

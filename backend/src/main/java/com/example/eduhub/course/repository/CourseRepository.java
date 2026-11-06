@@ -2,6 +2,7 @@ package com.example.eduhub.course.repository;
 
 import com.example.eduhub.course.domain.Course;
 import com.example.eduhub.course.domain.CourseStatus;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,4 +28,8 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
       @Param("keyword") String keyword,
       @Param("category") String category,
       Pageable pageable);
+
+  /** 해당 상태인 과정의 분류를 중복 없이 이름순으로 조회한다 (D-23). */
+  @Query("select distinct c.category from Course c where c.status = :status order by c.category")
+  List<String> findCategories(@Param("status") CourseStatus status);
 }

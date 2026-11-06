@@ -53,6 +53,11 @@ public class CourseQueryService {
     return CourseDetailResponse.of(course, sessions);
   }
 
+  /** 종료되지 않은 과정의 분류 목록 (D-23). */
+  public List<String> getCategories() {
+    return courseRepository.findCategories(CourseStatus.OPEN);
+  }
+
   private static String blankToNull(String value) {
     return StringUtils.hasText(value) ? value.trim() : null;
   }

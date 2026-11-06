@@ -136,4 +136,23 @@ class CourseRepositoryTest {
                 course.getId(), CourseSessionStatus.OPEN))
         .containsExactly(earlier, later);
   }
+
+  @Test
+  @DisplayName("분류 목록은 종료되지 않은 과정의 분류를 중복 없이 이름순으로 돌려준다 (D-23)")
+  void findCategories() {
+    String first = category + "-A";
+    String second = category + "-B";
+    String closedOnly = category + "-C";
+    courseRepository.save(new Course("과정 1", second, null));
+    courseRepository.save(new Course("과정 2", first, null));
+    courseRepository.save(new Course("과정 3", first, null));
+    Course closed = new Course("과정 4", closedOnly, null);
+    closed.close();
+    courseRepository.save(closed);
+
+    // 개발 DB의 다른 분류가 섞여 있을 수 있으므로 이 테스트의 분류만 골라 확인한다
+    assertThat(courseRepository.findCategories(CourseStatus.OPEN))
+        .filteredOn(name -> name.startsWith(category))
+        .containsExactly(first, second);
+  }
 }
