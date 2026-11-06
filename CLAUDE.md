@@ -16,7 +16,7 @@ EduHub는 사내 교육과정 조회 및 수강 신청 시스템이다.
 ## 실행 명령
 
 - 백엔드 테스트: `cd backend && ./gradlew test`
-- 백엔드 로컬 실행: `cd backend && ./gradlew bootRun` (dev 프로필, PostgreSQL과 루트 `.env` 필요)
+- 백엔드 로컬 실행: `cd backend && ./gradlew bootRun` (dev 프로필, 개발 DB(SQL Server) 접속 정보가 담긴 루트 `.env` 필요)
 - 테스트 하나만 실행, 포맷 검사 같은 세부 명령은 `backend/CLAUDE.md`
 
 ## 공통 규칙

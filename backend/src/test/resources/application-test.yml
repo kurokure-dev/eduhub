@@ -1,9 +1,13 @@
-# 테스트 프로필.
-# 1주차에는 엔티티가 없으므로 DB 없이 테스트가 돌도록 DB 관련 자동 설정을 끈다.
-# 엔티티가 생기면 PostgreSQL(Testcontainers)로 바꾼다. H2는 락 동작이 달라 NFR-01 검증에 쓰지 않는다.
+# 테스트 프로필. 개발 DB(SQL Server)에 직접 연결한다 (D-15)
+# 접속 정보는 dev와 같은 환경 변수(.env)를 쓴다. @DataJpaTest는 테스트마다 롤백하므로 데이터가 남지 않는다
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  config:
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Flyway가 만든 스키마와 엔티티가 어긋나면 테스트가 실패하도록 검사만 한다
+      ddl-auto: validate

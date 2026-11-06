@@ -12,7 +12,7 @@
 
 \## 기술 스택
 
-\- 백엔드: Java 21, Spring Boot 3, Spring Data JPA, Flyway, springdoc-openapi, PostgreSQL
+\- 백엔드: Java 21, Spring Boot 3, Spring Data JPA, Flyway, springdoc-openapi, SQL Server
 
 \- 프론트엔드: React 18 + TypeScript, Module Federation(shell, course-mfe, enrollment-mfe), MUI, Axios
 
@@ -68,4 +68,6 @@
 | D-11 | 종료의 의미 | 회차 "종료"는 모집 마감이다. 종료 전까지 대기자는 그대로 남는다 | FR-03, D-04 |
 | D-12 | 강등 기준 | 정원이 줄면 신청 시각이 늦은 확정자부터 대기로 바꾸고, 내려간 사람은 대기 맨 앞 순번이 된다. 여러 명이 함께 내려가면 그중 신청 시각이 이른 사람이 앞 순번이다 | D-06 |
 | D-13 | 강등 알림·정원 변경 시점 | 확정에서 대기로 바뀔 때도 알림을 남긴다. 정원은 회차 마감 전까지만 바꿀 수 있다 | FR-03, FR-09 |
+| D-14 | DB 종류 | 프로젝트 DB는 PostgreSQL이 아니라 SQL Server다 (개발 DB: SGY_EHUB). 한글을 저장하므로 문자열 컬럼은 NVARCHAR로 만든다 | NFR-01, NFR-06 |
+| D-15 | 테스트 DB | DB 테스트는 Testcontainers 없이 개발 DB(SGY_EHUB)에 직접 연결한다. 접속 정보는 dev와 같은 `.env`를 쓰고, 테스트 데이터는 롤백으로 남기지 않는다 | NFR-01, NFR-05 |
 
