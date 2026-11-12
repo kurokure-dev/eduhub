@@ -44,3 +44,9 @@ ehthumbs.db
 .env
 .env.*
 !.env.example
+
+# ===== Claude Code =====
+# 개인 설정과 이 PC 전용 실행 설정은 커밋하지 않는다 (팀 공통 규칙은 .claude/settings.json)
+.claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
