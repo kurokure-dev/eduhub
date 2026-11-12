@@ -189,7 +189,7 @@ T2와 T3은 서로 독립이지만 T4가 둘 다 필요하다. 순서대로 진�
 |---|---|---|
 | N1 | 100스레드가 서로 다른 사번으로 동시에 `enroll` | 예외 0, CONFIRMED 행 10, `confirmed_count` 10, WAITING 99(모두 `waiting_order` NULL), 응답 중 CONFIRMED 정확히 1 |
 | N2 | 정원 50 회차에 같은 사번으로 20스레드 동시 `enroll` | 성공 1, `DuplicateEnrollmentException` 19, 해당 사번의 행 1개 |
-| N3 | 정원 10·확정 9 회차에 50스레드 신청과 관리자 `updateSession`(같은 정원, 장소만 변경) 동시 실행 | 끝난 뒤 `confirmed_count`가 CONFIRMED 행 수와 같다 (lost update 없음) |
+| N3 | 정원 60·확정 9 회차에 신청 50건과 관리자 `updateSession`(정원 60 그대로, 장소만 변경) 5건을 같은 래치로 섞어 동시 실행 | 예외 0, `confirmed_count` == CONFIRMED 행 수 == 59 (lost update 없음), 정원 60 유지, 장소가 변경 후 값 중 하나 |
 
 - 결과는 `JdbcTemplate`으로 DB에서 직접 센다 (영속성 컨텍스트 캐시 배제)
 - 실행 시간을 `System.out`이 아니라 로거로 남긴다
