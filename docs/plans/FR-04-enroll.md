@@ -158,7 +158,7 @@ T2와 T3은 서로 독립이지만 T4가 둘 다 필요하다. 순서대로 진�
 | 파일 | 내용 |
 |---|---|
 | `enrollment/dto/EnrollRequest.java` (신규) | `record(@Schema(description = "사번", example = "E2024001") @NotBlank @Size(max = 20) String employeeId)` |
-| `enrollment/controller/EnrollmentController.java` (신규) | `@RestController @RequestMapping("/api/v1/sessions/{sessionId}/enrollments") @Tag(name = "수강 신청")`. `@PostMapping @ResponseStatus(CREATED) EnrollmentResponse enroll(@PathVariable Long sessionId, @Valid @RequestBody EnrollRequest request)`. 본문에 `// TODO(NFR-03): 인증 도입 시 현재 로그인 사용자 사번으로 교체한다 (D-36)`. `@Operation` description에 D-35·D-36·D-07, `@ApiResponse` 201·400·404·409(ProblemDetail) |
+| `enrollment/controller/EnrollmentController.java` (신규) | `@RestController @RequestMapping("/api/v1/sessions/{sessionId}/enrollments") @Tag(name = "Enrollment", description = "회차 수강 신청")` (태그 이름은 영어. 생성 클라이언트의 클래스 이름 `EnrollmentApi`가 된다). `@PostMapping @ResponseStatus(CREATED) EnrollmentResponse enroll(@PathVariable Long sessionId, @Valid @RequestBody EnrollRequest request)`. 본문에 `// TODO(NFR-03): 인증 도입 시 현재 로그인 사용자 사번으로 교체한다 (D-36)`. `@Operation` description에 D-35·D-36·D-07, `@ApiResponse` 201·400·404·409(ProblemDetail) |
 
 **테스트**
 

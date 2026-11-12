@@ -13,6 +13,10 @@
   ],
   "tags": [
     {
+      "name": "Enrollment",
+      "description": "회차 수강 신청"
+    },
+    {
       "name": "Health",
       "description": "서버 상태 확인"
     },
@@ -211,6 +215,79 @@
           },
           "409": {
             "description": "마감된 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sessionId}/enrollments": {
+      "post": {
+        "tags": [
+          "Enrollment"
+        ],
+        "summary": "수강 신청",
+        "description": "회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.",
+        "operationId": "enroll",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "신청됨 (확정 또는 대기)",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "사번이 비었거나 20자를 넘음",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "마감된 회차이거나 이미 신청함",
             "content": {
               "*/*": {
                 "schema": {
@@ -858,6 +935,10 @@
               "OPEN",
               "CLOSED"
             ]
+          },
+          "confirmedCount": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -890,6 +971,50 @@
           "place",
           "startDate"
         ]
+      },
+      "EnrollRequest": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "사번",
+            "example": "E2024001",
+            "maxLength": 20,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "employeeId"
+        ]
+      },
+      "EnrollmentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sessionId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "WAITING",
+              "CANCELLED",
+              "COMPLETED"
+            ]
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "CourseSummaryResponse": {
         "type": "object",

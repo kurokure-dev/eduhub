@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 수강 신청 (FR-04). */
-@Tag(name = "수강 신청", description = "회차 수강 신청")
+@Tag(name = "Enrollment", description = "회차 수강 신청")
 @RestController
 @RequestMapping("/api/v1/sessions/{sessionId}/enrollments")
 public class EnrollmentController {

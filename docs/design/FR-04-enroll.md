@@ -33,7 +33,7 @@
 
 ### `POST /api/v1/sessions/{sessionId}/enrollments`
 
-회차에 수강 신청한다. `EnrollmentController`(`enrollment/controller`), `@Tag(name = "수강 신청")`.
+회차에 수강 신청한다. `EnrollmentController`(`enrollment/controller`), `@Tag(name = "Enrollment", description = "회차 수강 신청")`. 태그 이름은 기존 컨트롤러처럼 영어로 쓴다 (생성 클라이언트의 `EnrollmentApi`).
 
 요청 본문 `EnrollRequest`:
 
