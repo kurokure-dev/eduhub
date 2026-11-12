@@ -14,6 +14,11 @@ public class GlobalExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
   }
 
+  @ExceptionHandler(ConflictException.class)
+  public ProblemDetail handleConflict(ConflictException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+  }
+
   @ExceptionHandler(InvalidSortException.class)
   public ProblemDetail handleInvalidSort(InvalidSortException e) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
