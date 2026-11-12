@@ -17,11 +17,541 @@
       "description": "서버 상태 확인"
     },
     {
+      "name": "AdminCourse",
+      "description": "관리자 교육과정·회차 관리"
+    },
+    {
       "name": "Course",
       "description": "교육과정 조회"
     }
   ],
   "paths": {
+    "/api/v1/admin/courses/{id}": {
+      "get": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "관리자 과정 상세 조회",
+        "description": "과정과 모든 회차(마감 포함)를 일정순으로 조회한다 (D-34).",
+        "operationId": "getAdminCourse",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCourseDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "과정 수정",
+        "description": "제목·분류·설명을 바꾼다. 종료된 과정은 바꿀 수 없다 (D-32).",
+        "operationId": "updateCourse",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCourseDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "종료된 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{id}/sessions/{sessionId}": {
+      "put": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "회차 수정",
+        "description": "일정·장소·정원을 바꾼다. 마감된 회차는 바꿀 수 없다 (D-13, D-32).",
+        "operationId": "updateSession",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정이나 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "마감된 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses": {
+      "get": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "관리자 과정 목록 조회",
+        "description": "종료된 과정을 포함해 페이지 단위로 조회한다 (D-34). status를 주면 그 상태만 조회한다. page는 0부터, 기본 정렬은 id 내림차순, 기본 크기는 10이다. 정렬 가능한 필드: id, title, category, status",
+        "operationId": "searchAdminCourses",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "상태 (없으면 전체)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "제목 검색어 (부분 일치)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "분류 (정확히 일치)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "id,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseAdminCourseSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "정렬할 수 없는 필드",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "과정 등록",
+        "description": "운영 중(OPEN) 상태의 과정을 등록한다.",
+        "operationId": "createCourse",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "등록됨",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCourseDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{id}/sessions": {
+      "post": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "회차 등록",
+        "description": "모집 중(OPEN) 상태의 회차를 추가한다. 종료된 과정에는 추가할 수 없다 (D-32).",
+        "operationId": "createSession",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "등록됨",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "종료된 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{id}/sessions/{sessionId}/close": {
+      "post": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "회차 마감",
+        "description": "회차 모집을 마감한다 (D-04, D-11).",
+        "operationId": "closeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정이나 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 마감된 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{id}/close": {
+      "post": {
+        "tags": [
+          "AdminCourse"
+        ],
+        "summary": "과정 종료",
+        "description": "과정을 종료하고 모집 중인 회차를 모두 마감한다 (D-31). 종료된 과정은 임직원 목록에서 빠진다 (D-17).",
+        "operationId": "closeCourse",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCourseDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 종료된 과정",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses": {
       "get": {
         "tags": [
@@ -204,6 +734,36 @@
   },
   "components": {
     "schemas": {
+      "CourseRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "제목",
+            "example": "Spring 입문",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "category": {
+            "type": "string",
+            "description": "분류",
+            "example": "개발",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string",
+            "description": "설명 (선택)",
+            "example": "Spring Boot 기초 과정",
+            "maxLength": 2000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "category",
+          "title"
+        ]
+      },
       "ProblemDetail": {
         "type": "object",
         "properties": {
@@ -242,6 +802,94 @@
             "additionalProperties": {}
           }
         }
+      },
+      "AdminCourseDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSessionResponse"
+            }
+          }
+        }
+      },
+      "AdminSessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "place": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          }
+        }
+      },
+      "SessionRequest": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "일정 (표시용, D-02)",
+            "example": "2026-12-01"
+          },
+          "place": {
+            "type": "string",
+            "description": "장소",
+            "example": "본사 3층 교육장",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "description": "정원",
+            "example": 20,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "capacity",
+          "place",
+          "startDate"
+        ]
       },
       "CourseSummaryResponse": {
         "type": "object",
@@ -326,6 +974,51 @@
           "remainingSeats": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "AdminCourseSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          }
+        }
+      },
+      "PageResponseAdminCourseSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCourseSummaryResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
