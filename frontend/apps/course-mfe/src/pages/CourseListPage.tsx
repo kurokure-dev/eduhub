@@ -6,6 +6,7 @@ import {
   Container,
   FormControl,
   InputLabel,
+  Link,
   MenuItem,
   Paper,
   Select,
@@ -20,33 +21,70 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useCategories } from '../hooks/useCategories';
 import { useCourses } from '../hooks/useCourses';
 
 const ROWS_PER_PAGE_OPTIONS = [10, 20, 50];
+const DEFAULT_SIZE = 10;
 
-/** 과정 목록 (FR-01). 서버 데이터는 훅으로만 가져온다 */
+interface ListQuery {
+  keyword: string;
+  category: string;
+  page: number;
+  size: number;
+}
+
+/** URL 쿼리에서 목록 상태를 읽는다. 잘못된 값은 기본값으로 본다 (D-25) */
+function readQuery(params: URLSearchParams): ListQuery {
+  const page = Number(params.get('page'));
+  const size = Number(params.get('size'));
+  return {
+    keyword: params.get('keyword') ?? '',
+    category: params.get('category') ?? '',
+    page: Number.isInteger(page) && page > 0 ? page : 0,
+    size: ROWS_PER_PAGE_OPTIONS.includes(size) ? size : DEFAULT_SIZE,
+  };
+}
+
+/** 목록 상태를 URL 쿼리로 바꾼다. 기본값은 쿼리에서 뺀다 (D-25) */
+function toParams({ keyword, category, page, size }: ListQuery): URLSearchParams {
+  const params = new URLSearchParams();
+  if (keyword) params.set('keyword', keyword);
+  if (category) params.set('category', category);
+  if (page > 0) params.set('page', String(page));
+  if (size !== DEFAULT_SIZE) params.set('size', String(size));
+  return params;
+}
+
+/** 과정 목록 (FR-01). 서버 데이터는 훅으로만 가져오고, 검색 상태는 URL 쿼리에 둔다 (D-25) */
 export default function CourseListPage() {
-  const [keywordInput, setKeywordInput] = useState('');
-  const [keyword, setKeyword] = useState('');
-  const [category, setCategory] = useState('');
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = readQuery(searchParams);
+  const { keyword, category, page, size } = query;
+  const [keywordInput, setKeywordInput] = useState(keyword);
+
+  // 뒤로 가기 등으로 URL의 검색어가 바뀌면 입력란도 맞춘다
+  useEffect(() => {
+    setKeywordInput(keyword);
+  }, [keyword]);
 
   const courses = useCourses({ keyword, category, page, size });
   const categories = useCategories();
 
+  const updateQuery = (changes: Partial<ListQuery>) => {
+    setSearchParams(toParams({ ...query, ...changes }));
+  };
+
   // 검색어나 분류가 바뀌면 첫 페이지부터 다시 본다
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
-    setKeyword(keywordInput.trim());
-    setPage(0);
+    updateQuery({ keyword: keywordInput.trim(), page: 0 });
   };
 
   const handleCategoryChange = (value: string) => {
-    setCategory(value);
-    setPage(0);
+    updateQuery({ category: value, page: 0 });
   };
 
   const rows = courses.data?.content ?? [];
@@ -118,7 +156,12 @@ export default function CourseListPage() {
                 ) : (
                   rows.map((course) => (
                     <TableRow key={course.id}>
-                      <TableCell>{course.title}</TableCell>
+                      <TableCell>
+                        {/* 제목을 상세 링크로 둔다 (D-26) */}
+                        <Link component={RouterLink} to={`/courses/${course.id}`} underline="hover">
+                          {course.title}
+                        </Link>
+                      </TableCell>
                       <TableCell>{course.category}</TableCell>
                     </TableRow>
                   ))
@@ -132,11 +175,8 @@ export default function CourseListPage() {
             page={page}
             rowsPerPage={size}
             rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-            onPageChange={(_, nextPage) => setPage(nextPage)}
-            onRowsPerPageChange={(event) => {
-              setSize(Number(event.target.value));
-              setPage(0);
-            }}
+            onPageChange={(_, nextPage) => updateQuery({ page: nextPage })}
+            onRowsPerPageChange={(event) => updateQuery({ size: Number(event.target.value), page: 0 })}
             labelRowsPerPage="페이지당 행 수"
           />
         </Paper>
