@@ -8,12 +8,12 @@ public record SessionResponse(
     Long id, LocalDate startDate, String place, int capacity, int remainingSeats) {
 
   public static SessionResponse from(CourseSession session) {
-    // D-16: 신청 기능이 생기기 전까지 남은 자리는 정원과 같다
+    // D-37: 남은 자리는 정원에서 확정 인원을 뺀 값이다
     return new SessionResponse(
         session.getId(),
         session.getStartDate(),
         session.getPlace(),
         session.getCapacity(),
-        session.getCapacity());
+        session.getRemainingSeats());
   }
 }

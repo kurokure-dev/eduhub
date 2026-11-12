@@ -32,8 +32,22 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+// NFR-01, D-40: 기본 test는 공유 개발 DB에 커밋하는 동시성 테스트(concurrency 태그)를 제외한다
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("concurrency")
+    }
+}
+
+// NFR-01, D-40: 동시성 테스트는 개발자가 직접 실행한다. check에는 연결하지 않는다
+tasks.register<Test>("concurrencyTest") {
+    group = "verification"
+    description = "공유 개발 DB에 커밋하는 동시성 테스트 (수동 실행, D-40)"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("concurrency")
+    }
 }
 
 // NFR-05: 포맷 검사. 확인은 ./gradlew spotlessCheck, 자동 정리는 ./gradlew spotlessApply

@@ -59,6 +59,7 @@ export interface AdminSessionResponse {
     'place'?: string;
     'capacity'?: number;
     'status'?: AdminSessionResponseStatusEnum;
+    'confirmedCount'?: number;
 }
 
 export const AdminSessionResponseStatusEnum = {
@@ -94,6 +95,29 @@ export interface CourseSummaryResponse {
     'title'?: string;
     'category'?: string;
 }
+export interface EnrollRequest {
+    /**
+     * 사번
+     */
+    'employeeId': string;
+}
+export interface EnrollmentResponse {
+    'id'?: number;
+    'sessionId'?: number;
+    'employeeId'?: string;
+    'status'?: EnrollmentResponseStatusEnum;
+    'appliedAt'?: string;
+}
+
+export const EnrollmentResponseStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+} as const;
+
+export type EnrollmentResponseStatusEnum = typeof EnrollmentResponseStatusEnum[keyof typeof EnrollmentResponseStatusEnum];
+
 export interface HealthResponse {
     'status'?: string;
 }
@@ -1162,6 +1186,122 @@ export class CourseApi extends BaseAPI {
      */
     public search(requestParameters: CourseApiSearchRequest = {}, options?: RawAxiosRequestConfig) {
         return CourseApiFp(this.configuration).search(requestParameters.keyword, requestParameters.category, requestParameters.page, requestParameters.size, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * EnrollmentApi - axios parameter creator
+ */
+export const EnrollmentApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * @summary 수강 신청
+         * @param {number} sessionId 
+         * @param {EnrollRequest} enrollRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        enroll: async (sessionId: number, enrollRequest: EnrollRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('enroll', 'sessionId', sessionId)
+            // verify required parameter 'enrollRequest' is not null or undefined
+            assertParamExists('enroll', 'enrollRequest', enrollRequest)
+            const localVarPath = `/api/v1/sessions/{sessionId}/enrollments`
+                .replace('{sessionId}', encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(enrollRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * EnrollmentApi - functional programming interface
+ */
+export const EnrollmentApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = EnrollmentApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * @summary 수강 신청
+         * @param {number} sessionId 
+         * @param {EnrollRequest} enrollRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async enroll(sessionId: number, enrollRequest: EnrollRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.enroll(sessionId, enrollRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnrollmentApi.enroll']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * EnrollmentApi - factory interface
+ */
+export const EnrollmentApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = EnrollmentApiFp(configuration)
+    return {
+        /**
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * @summary 수강 신청
+         * @param {EnrollmentApiEnrollRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.enroll(requestParameters.sessionId, requestParameters.enrollRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for enroll operation in EnrollmentApi.
+ */
+export interface EnrollmentApiEnrollRequest {
+    readonly sessionId: number
+
+    readonly enrollRequest: EnrollRequest
+}
+
+/**
+ * EnrollmentApi - object-oriented interface
+ */
+export class EnrollmentApi extends BaseAPI {
+    /**
+     * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+     * @summary 수강 신청
+     * @param {EnrollmentApiEnrollRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).enroll(requestParameters.sessionId, requestParameters.enrollRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

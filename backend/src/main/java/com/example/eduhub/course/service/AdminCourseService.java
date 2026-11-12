@@ -21,8 +21,8 @@ import org.springframework.util.StringUtils;
 /**
  * 관리자의 과정·회차 등록, 수정, 종료 (FR-03).
  *
- * <p>권한 검사는 인증 방식이 정해진 뒤 붙인다 (D-30). 신청 기능이 생기면 회차 마감(D-04)과 정원 변경(D-05, D-06)이 대기열을 바꾸므로 회차 단위로
- * 직렬화해야 한다 (NFR-01).
+ * <p>권한 검사는 인증 방식이 정해진 뒤 붙인다 (D-30). 회차를 바꾸는 경로(회차 수정·마감, 과정 종료)는 모두 회차 행 락을 잡아 신청과 직렬화한다 (D-29,
+ * NFR-01).
  */
 @Service
 @Transactional
@@ -77,7 +77,7 @@ public class AdminCourseService {
     Course course = findCourse(id);
     course.close();
     courseSessionRepository
-        .findByCourseIdAndStatusOrderByStartDateAscIdAsc(id, CourseSessionStatus.OPEN)
+        .findByCourseIdAndStatusForUpdate(id, CourseSessionStatus.OPEN)
         .forEach(CourseSession::close);
     return toDetail(course);
   }
@@ -111,9 +111,11 @@ public class AdminCourseService {
     return courseRepository.findById(id).orElseThrow(() -> new CourseNotFoundException(id));
   }
 
+  // 회차를 바꾸는 경로는 모두 회차 행 락을 잡는다 (D-29). Hibernate는 모든 컬럼을 UPDATE하므로 락 없이 바꾸면
+  // 그 사이 신청으로 늘어난 confirmed_count를 옛 값으로 덮어쓴다 (lost update)
   private CourseSession findSession(Long courseId, Long sessionId) {
     return courseSessionRepository
-        .findByIdAndCourseId(sessionId, courseId)
+        .findByIdAndCourseIdForUpdate(sessionId, courseId)
         .orElseThrow(() -> new CourseSessionNotFoundException(courseId, sessionId));
   }
 

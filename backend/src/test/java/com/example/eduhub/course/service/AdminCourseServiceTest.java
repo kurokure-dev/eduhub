@@ -97,9 +97,7 @@ class AdminCourseServiceTest {
     CourseSession first = new CourseSession(course, LocalDate.of(2026, 12, 1), "본사", 20);
     CourseSession second = new CourseSession(course, LocalDate.of(2026, 12, 8), "본사", 20);
     given(courseRepository.findById(1L)).willReturn(Optional.of(course));
-    given(
-            courseSessionRepository.findByCourseIdAndStatusOrderByStartDateAscIdAsc(
-                1L, CourseSessionStatus.OPEN))
+    given(courseSessionRepository.findByCourseIdAndStatusForUpdate(1L, CourseSessionStatus.OPEN))
         .willReturn(List.of(first, second));
 
     service.close(1L);
@@ -146,7 +144,8 @@ class AdminCourseServiceTest {
   @DisplayName("모집 중인 회차는 일정·장소·정원을 바꿀 수 있다 (D-33: 정원 값만 바뀐다)")
   void updateSession() {
     CourseSession session = openSession();
-    given(courseSessionRepository.findByIdAndCourseId(10L, 1L)).willReturn(Optional.of(session));
+    given(courseSessionRepository.findByIdAndCourseIdForUpdate(10L, 1L))
+        .willReturn(Optional.of(session));
 
     service.updateSession(1L, 10L, SESSION_REQUEST);
 
@@ -156,11 +155,25 @@ class AdminCourseServiceTest {
   }
 
   @Test
+  @DisplayName("확정자가 있는 회차의 정원은 바꿀 수 없다 (D-38)")
+  void updateSessionCapacityWithConfirmed() {
+    CourseSession session = openSession();
+    session.occupySeat();
+    given(courseSessionRepository.findByIdAndCourseIdForUpdate(10L, 1L))
+        .willReturn(Optional.of(session));
+
+    assertThatThrownBy(() -> service.updateSession(1L, 10L, SESSION_REQUEST))
+        .isInstanceOf(CourseStateException.class);
+    assertThat(session.getCapacity()).isEqualTo(20);
+  }
+
+  @Test
   @DisplayName("마감된 회차는 정원을 바꿀 수 없다 (D-13)")
   void updateClosedSession() {
     CourseSession session = openSession();
     session.close();
-    given(courseSessionRepository.findByIdAndCourseId(10L, 1L)).willReturn(Optional.of(session));
+    given(courseSessionRepository.findByIdAndCourseIdForUpdate(10L, 1L))
+        .willReturn(Optional.of(session));
 
     assertThatThrownBy(() -> service.updateSession(1L, 10L, SESSION_REQUEST))
         .isInstanceOf(CourseStateException.class);
@@ -170,7 +183,8 @@ class AdminCourseServiceTest {
   @Test
   @DisplayName("다른 과정의 회차는 찾을 수 없다")
   void sessionOfOtherCourse() {
-    given(courseSessionRepository.findByIdAndCourseId(10L, 2L)).willReturn(Optional.empty());
+    given(courseSessionRepository.findByIdAndCourseIdForUpdate(10L, 2L))
+        .willReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.closeSession(2L, 10L))
         .isInstanceOf(CourseSessionNotFoundException.class);
@@ -180,7 +194,8 @@ class AdminCourseServiceTest {
   @DisplayName("회차를 마감하고, 이미 마감된 회차는 다시 마감할 수 없다 (D-04, D-32)")
   void closeSession() {
     CourseSession session = openSession();
-    given(courseSessionRepository.findByIdAndCourseId(10L, 1L)).willReturn(Optional.of(session));
+    given(courseSessionRepository.findByIdAndCourseIdForUpdate(10L, 1L))
+        .willReturn(Optional.of(session));
 
     AdminSessionResponse response = service.closeSession(1L, 10L);
 
