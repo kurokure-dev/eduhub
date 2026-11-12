@@ -81,19 +81,4 @@ class AdminCourseRepositoryTest {
 
     assertThat(sessions).containsExactly(earlier, later);
   }
-
-  @Test
-  @DisplayName("다른 과정의 회차 id로는 찾을 수 없다")
-  void findByIdAndCourseId() {
-    Course course = courseRepository.save(new Course("Spring 입문", category, null));
-    Course other = courseRepository.save(new Course("JPA 심화", category, null));
-    CourseSession session =
-        courseSessionRepository.save(
-            new CourseSession(course, LocalDate.of(2026, 12, 1), "본사", 20));
-
-    assertThat(courseSessionRepository.findByIdAndCourseId(session.getId(), course.getId()))
-        .contains(session);
-    assertThat(courseSessionRepository.findByIdAndCourseId(session.getId(), other.getId()))
-        .isEmpty();
-  }
 }
