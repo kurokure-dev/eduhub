@@ -199,11 +199,11 @@ T2와 T3은 서로 독립이지만 T4가 둘 다 필요하다. 순서대로 진�
 **완료 명령**
 
 ```bash
-./gradlew spotlessApply spotlessCheck test --tests "*EnrollmentConcurrencyTest"
+./gradlew concurrencyTest
 ./gradlew spotlessCheck test
 ```
 
-두 번째 명령(전체 테스트) 통과가 백엔드 완료 조건이다.
+동시성 테스트는 `@Tag("concurrency")`로 기본 `test`에서 빠지며, 개발자가 `concurrencyTest`로 직접 실행한다 (D-40, 최종 검토 P1). 두 번째 명령(동시성 테스트를 뺀 전체 테스트) 통과가 백엔드 완료 조건이다.
 
 ---
 

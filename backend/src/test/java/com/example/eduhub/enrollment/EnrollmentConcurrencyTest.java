@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +42,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>주의: 클래스·메서드에 {@code @Transactional}이 없어 데이터가 공유 개발 DB(D-15)에 실제로 커밋된다. 만든 과정은
  * {@code @AfterEach}에서 지운다. 개발자가 직접 실행한다.
  *
+ * <p>기본 test에서 제외된다. 실행: ./gradlew concurrencyTest (D-40)
+ *
  * <p>래치를 풀어도 실제 동시 진입 수는 Hikari 풀(기본 10)이 제한한다. 원격 DB에서 직렬 처리가 느릴 수 있어 연결 대기·전체 타임아웃을 120초로 둔다.
  */
+@Tag("concurrency")
 @SpringBootTest(properties = "spring.datasource.hikari.connection-timeout=120000")
 @ActiveProfiles("test")
 class EnrollmentConcurrencyTest {

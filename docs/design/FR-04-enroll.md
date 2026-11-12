@@ -3,7 +3,7 @@
 - 브랜치: `feature/fr-04-enroll`
 - 관련 요구사항: FR-04, NFR-01, NFR-03, NFR-04, NFR-05, NFR-07 (FR-05는 WAITING 저장 자리만 남김)
 - 관련 결정: D-04, D-07, D-08, D-16, D-29, D-31, D-33, 이번에 추가한 D-35~D-39
-- 상태: 승인 대기
+- 상태: 승인됨, 구현 완료 (T1~T6). 개발 DB 전용, NFR-03·FR-06 전 배포 금지 (D-41)
 
 ## 1. 범위
 
@@ -25,7 +25,9 @@
 | D-36 | 신청자 식별 | 인증 방식(NFR-03)이 정해지기 전까지 신청자는 요청 본문의 `employeeId`(사번, 최대 20자)로 받는다. 본인 확인은 하지 않는다. 인증을 도입할 때 현재 로그인 사용자로 바꾼다. 서비스는 사번을 인자로 받고, Controller에 `TODO(NFR-03)`를 남긴다 |
 | D-37 | 확정 인원 | 회차(`course_session`)에 확정 인원 `confirmed_count`를 두고 회차 행 락 안에서만 바꾼다. 과정 상세의 남은 자리는 `capacity - confirmed_count`다 (D-16 대체) |
 | D-38 | 임시 제한 | 확정자가 있는 회차는 정원을 바꿀 수 없다(409, 일정·장소는 바꿀 수 있다). 마감 시 대기 자동 취소(D-04)와 승급·강등(D-05, D-06)은 FR-06에서 붙이며, 그때 이 제한을 푼다 (D-33 갱신) |
-| D-39 | 대기 정렬 키 | 대기 순서는 `waiting_order`(회차 안에서 유일한 정수)로 정한다. 키 부여는 FR-05에서 하고, 그 전에 저장된 대기 신청은 FR-05 마이그레이션이 `applied_at, id` 순으로 채운다 |
+| D-39 | 대기 정렬 키 | 대기 순서는 신청 시각이 아니라 `waiting_order`(회차 안에서 유일한 정수)로 정한다. 새 대기는 회차의 현재 최대값 + 1(없으면 1), 강등자는 최소값 - 1로 앞에 넣는다. 대기 순번은 같은 회차의 대기 중 자신 이하 키의 개수다. 키 부여는 FR-05에서 한다. 그 전에 저장된 대기 신청은 FR-05 마이그레이션이 `applied_at, id` 순으로 채운다 |
+| D-40 | 동시성 테스트 | 동시성 테스트는 D-15의 예외로 개발 DB에 커밋하고 끝나면 지운다. `@Tag("concurrency")`로 기본 `./gradlew test`에서 빼고 `./gradlew concurrencyTest`로 직접 실행한다 |
+| D-41 | 배포 제한 | 인증(NFR-03)과 취소(FR-06) 전까지 신청 기능은 개발 DB에서만 쓰고 공유·운영 환경에 배포하지 않는다 |
 
 ## 3. API
 
@@ -75,6 +77,8 @@ return enrollmentService.enroll(sessionId, request.employeeId());
 | 409 | 같은 회차에 확정·대기 신청이 이미 있음 (FR-04, D-07) | `DuplicateEnrollmentException extends ConflictException` (enrollment) |
 
 회차 경로에 과정 id를 넣지 않는다. 회차 id만으로 유일하고, 종료된 과정의 회차는 D-31로 모두 마감돼 409가 된다. 같은 과정의 다른 회차는 따로 신청할 수 있다 (D-08).
+
+알려진 제한: 과정 종료와 회차 추가가 동시에 일어나면, 종료된 과정에 모집 중인 회차가 남을 수 있고 그 회차에는 신청이 된다. 신청은 회차 상태만 보고 과정 상태는 보지 않기 때문이다. 과정 행 락 또는 신청 시 과정 상태 확인으로 고치며 후속 이슈로 다룬다 (9절).
 
 ### 바뀌는 기존 API
 
@@ -265,6 +269,8 @@ public class SessionLockService {
 
 - 회차 하나에 신청이 몰리면 줄을 선다. 한 신청의 락 구간은 조회 2~3번과 INSERT 1번이라 짧다
 - 락 대기 시간 제한(`jakarta.persistence.lock.timeout`)은 이번엔 두지 않는다. 동시성 테스트에서 100건 처리 시간을 기록해 판단 근거로 남긴다
+- 측정 결과 (개발 DB, Hikari 기본 풀 10): 마지막 1자리에 100건 동시 신청 1254ms, 같은 사번 20건 462ms, 신청 50건과 관리자 수정 5건 891ms. 락 대기 중인 신청도 연결을 잡고 있으므로, 회차 하나에 신청이 몰리면 풀이 먼저 소진돼 다른 API도 연결을 기다린다. 지금 수치로는 여유가 있으며, FR-06에서 락 대기 시간 제한을 다시 판단한다
+- 동시성 테스트는 거짓 실패를 막으려고 테스트에서만 연결 대기 시간을 120초로 늘렸다. 운영 기본값은 30초다
 
 ## 8. 테스트 시나리오
 
@@ -298,6 +304,7 @@ public class SessionLockService {
 - R5 `ck_course_session_confirmed_count`: 정원보다 많은 `confirmed_count` 저장 → 예외
 - R6 `existsBy...` 두 메서드의 참·거짓
 - R7 `findByIdForUpdate` SQL에 `updlock` 힌트가 들어간다 (SQL 로그 확인, 자동 검증이 어려우면 수동 확인 결과를 PR에 기록)
+  - 확인 결과 (T2, `CourseSessionLockRepositoryTest`): 락 조회 3개 모두 `from course_session cs1_0 with (updlock,holdlock,rowlock) where ...`로 나간다
 
 ### `CourseSession` 단위 테스트
 
@@ -314,7 +321,9 @@ E1 `occupySeat`는 정원까지 증가하고 초과하면 예외, E2 마감 회�
 - 실행: 100개 스레드가 `CountDownLatch`로 동시에 서로 다른 사번으로 `enroll` 호출
 - 확인: 확정 정확히 10(새로 1), `confirmed_count` 10, WAITING 99건(모두 `waiting_order` NULL), 호출 예외 0
 - 같은 사번 동시 신청: 남은 자리가 많은 다른 회차에 같은 사번으로 20개 스레드 → 1건 성공, 19건 `DuplicateEnrollmentException`, 행 1개
-- 정리: 커밋된 데이터라 `@AfterEach`에서 만든 신청·회차·과정을 지운다 (D-15 공유 DB). 실행 시간을 로그로 남긴다
+- 신청과 관리자 수정 동시 실행: 정원 60·확정 9 회차에 신청 50건과 관리자 회차 수정 5건(정원 그대로) → `confirmed_count` == CONFIRMED 행 수 == 59
+- 정리: 커밋된 데이터라 `@AfterEach`에서 만든 신청·회차·과정을 지운다 (D-40). 실행 시간을 로그로 남긴다
+- 실행: `@Tag("concurrency")`로 기본 test에서 빠지며 `./gradlew concurrencyTest`로 직접 실행한다 (D-40)
 
 ## 9. 위험 영역
 
@@ -323,7 +332,9 @@ E1 `occupySeat`는 정원까지 증가하고 초과하면 예외, E2 마감 회�
 | 관리자 수정이 `confirmed_count`를 덮어씀 | 회차 변경 경로 모두 `ForUpdate` 조회 (7절), 테스트로 호출 확인 |
 | SQL Server 락 에스컬레이션·교착 | 단일 행 `rowlock`, 여러 회차는 id 순, 동시성 테스트로 확인 |
 | 신청자 본인 확인 없음 (NFR-03 미충족) | D-36에 명시, Controller `TODO(NFR-03)`. 인증 도입 때 교체 |
+| 아무 사번으로 정원을 채우면 되돌릴 수단이 회차 마감뿐 (취소 API 없음, D-38로 정원 증가도 막힘) | D-41: NFR-03·FR-06 전에는 개발 DB 전용, 공유·운영 배포 금지 |
+| 과정 종료와 회차 추가가 겹치면 종료된 과정의 회차에 신청 가능 | 3절 알려진 제한. 후속 이슈 (과정 행 락 또는 신청 시 과정 상태 확인) |
 | FR-05 전까지 대기 순서는 `applied_at, id`로만 알 수 있음 | D-39에 명시. FR-05에서 `waiting_order` 백필 마이그레이션과 CHECK 강화 |
 | 마감 뒤에도 대기 신청이 WAITING으로 남음 | D-38에 명시, FR-06에서 D-04 처리 |
-| 동시성 테스트가 공유 개발 DB에 커밋 데이터 남김 | `@AfterEach` 정리, 고유 제목으로 범위 한정 |
+| 동시성 테스트가 공유 개발 DB에 커밋 데이터 남김 | D-40: 기본 test에서 제외하고 수동 실행, `@AfterEach` 과정별 정리, 고유 제목으로 범위 한정 |
 | 마이그레이션이 공유 개발 DB에 바로 적용됨 | 실행 전 SQL을 개발자에게 보여 준다 (eduhub-api 1절) |
