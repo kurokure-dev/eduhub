@@ -148,13 +148,14 @@ class AdminCourseControllerTest {
                 CourseStatus.CLOSED,
                 List.of(
                     new AdminSessionResponse(
-                        10L, LocalDate.of(2026, 12, 1), "본사", 20, CourseSessionStatus.CLOSED))));
+                        10L, LocalDate.of(2026, 12, 1), "본사", 20, CourseSessionStatus.CLOSED, 5))));
 
     mockMvc
         .perform(post(BASE + "/1/close"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CLOSED"))
-        .andExpect(jsonPath("$.sessions[0].status").value("CLOSED"));
+        .andExpect(jsonPath("$.sessions[0].status").value("CLOSED"))
+        .andExpect(jsonPath("$.sessions[0].confirmedCount").value(5));
   }
 
   @Test
@@ -165,7 +166,7 @@ class AdminCourseControllerTest {
                 1L, new SessionRequest(LocalDate.of(2026, 12, 1), "본사 3층", 20)))
         .willReturn(
             new AdminSessionResponse(
-                10L, LocalDate.of(2026, 12, 1), "본사 3층", 20, CourseSessionStatus.OPEN));
+                10L, LocalDate.of(2026, 12, 1), "본사 3층", 20, CourseSessionStatus.OPEN, 0));
 
     mockMvc
         .perform(

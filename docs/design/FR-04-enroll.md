@@ -92,6 +92,8 @@ return enrollmentService.enroll(sessionId, request.employeeId());
 ALTER TABLE course_session
     ADD confirmed_count INT NOT NULL
         CONSTRAINT df_course_session_confirmed_count DEFAULT 0;
+GO
+-- 새 컬럼을 같은 배치에서 참조하면 컴파일 오류가 나므로 배치를 나눈다
 
 -- NFR-01: 정원 초과의 마지막 방어선
 ALTER TABLE course_session
@@ -133,7 +135,7 @@ CREATE INDEX ix_enrollment_employee_id ON enrollment (employee_id);
 
 - 기존 회차는 `DEFAULT 0`으로 채워진다 (하위 호환). 기존 행은 신청이 없으므로 0이 맞다.
 - 필터 인덱스는 `QUOTED_IDENTIFIER`·`ANSI_NULLS`가 ON이어야 한다. MS JDBC 드라이버 기본값이 ON이다.
-- 컬럼 추가와 그 컬럼을 쓰는 CHECK를 한 배치에 두면 컴파일 오류가 날 수 있다. Flyway가 문장 단위로 실행하는지 구현 때 확인하고, 실패하면 `GO`로 나눈다.
+- Flyway는 SQL Server에서 `GO`로만 배치를 나눈다. 새 컬럼을 같은 배치에서 참조하면 오류가 나므로 `GO`로 나눈다 (T1에서 확인).
 
 ## 5. 엔티티·도메인
 
