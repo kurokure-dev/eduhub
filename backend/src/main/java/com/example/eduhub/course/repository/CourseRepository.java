@@ -32,4 +32,18 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
   /** 해당 상태인 과정의 분류를 중복 없이 이름순으로 조회한다 (D-23). */
   @Query("select distinct c.category from Course c where c.status = :status order by c.category")
   List<String> findCategories(@Param("status") CourseStatus status);
+
+  /** 관리자 과정 목록 검색 (D-34). 종료된 과정도 포함하며, status·keyword·category 중 null인 조건은 적용하지 않는다. */
+  @Query(
+      """
+      select c from Course c
+      where (:status is null or c.status = :status)
+        and (:keyword is null or c.title like concat('%', :keyword, '%'))
+        and (:category is null or c.category = :category)
+      """)
+  Page<Course> adminSearch(
+      @Param("status") CourseStatus status,
+      @Param("keyword") String keyword,
+      @Param("category") String category,
+      Pageable pageable);
 }
