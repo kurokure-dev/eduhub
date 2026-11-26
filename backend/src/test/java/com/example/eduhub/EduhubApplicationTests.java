@@ -32,4 +32,15 @@ class EduhubApplicationTests {
         .andExpect(jsonPath("$.info.title").value("EduHub API"))
         .andExpect(jsonPath("$.paths['/api/health']").exists());
   }
+
+  @Test
+  @DisplayName("OpenAPI 문서에 로그인, me, bearerAuth 보안 스킴이 포함된다")
+  void apiDocsIncludeAuth() throws Exception {
+    mockMvc
+        .perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['/api/auth/login']").exists())
+        .andExpect(jsonPath("$.paths['/api/me']").exists())
+        .andExpect(jsonPath("$.components.securitySchemes.bearerAuth").exists());
+  }
 }

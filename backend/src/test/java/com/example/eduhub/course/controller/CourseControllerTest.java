@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.config.SecurityConfig;
 import com.example.eduhub.common.api.PageResponse;
 import com.example.eduhub.course.domain.Course;
 import com.example.eduhub.course.domain.CourseSession;
@@ -27,16 +28,20 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CourseController.class)
+@Import(SecurityConfig.class)
 class CourseControllerTest {
 
   @Autowired private MockMvc mockMvc;
+  @MockitoBean private JwtDecoder jwtDecoder;
   @MockitoBean private CourseQueryService courseQueryService;
 
   @Test
