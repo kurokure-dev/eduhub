@@ -34,7 +34,7 @@ public class Enrollment {
   @Column(nullable = false, length = 20)
   private EnrollmentStatus status;
 
-  /** 대기 정렬 키. FR-04에서는 항상 null이다 (D-39). */
+  /** 대기 정렬 키. 대기 신청은 회차 안에서 유일한 값을 가지고, 그 밖의 상태는 null이다 (D-39, D-46). */
   @Column(name = "waiting_order")
   private Long waitingOrder;
 
@@ -57,8 +57,11 @@ public class Enrollment {
   }
 
   public static Enrollment waiting(
-      CourseSession session, String employeeId, LocalDateTime appliedAt) {
-    return new Enrollment(session, employeeId, EnrollmentStatus.WAITING, appliedAt);
+      CourseSession session, String employeeId, LocalDateTime appliedAt, long waitingOrder) {
+    Enrollment enrollment =
+        new Enrollment(session, employeeId, EnrollmentStatus.WAITING, appliedAt);
+    enrollment.waitingOrder = waitingOrder;
+    return enrollment;
   }
 
   public Long getId() {

@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -120,13 +121,15 @@ class EnrollmentConcurrencyTest {
     assertThat(countByStatus(ids.sessionId(), "CONFIRMED")).isEqualTo(10);
     assertThat(confirmedCount(ids.sessionId())).isEqualTo(10);
     assertThat(countByStatus(ids.sessionId(), "WAITING")).isEqualTo(99);
-    Integer waitingWithOrder =
-        jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM enrollment WHERE session_id = ?"
-                + " AND status = 'WAITING' AND waiting_order IS NOT NULL",
-            Integer.class,
+    List<Long> waitingOrders =
+        jdbcTemplate.queryForList(
+            "SELECT waiting_order FROM enrollment WHERE session_id = ?"
+                + " AND status = 'WAITING' ORDER BY waiting_order",
+            Long.class,
             ids.sessionId());
-    assertThat(waitingWithOrder).as("waiting_order가 채워진 대기 행").isZero();
+    assertThat(waitingOrders)
+        .as("대기 99행의 waiting_order는 1~99로 중복 없음 (D-46)")
+        .containsExactlyElementsOf(LongStream.rangeClosed(1, 99).boxed().toList());
   }
 
   @Test

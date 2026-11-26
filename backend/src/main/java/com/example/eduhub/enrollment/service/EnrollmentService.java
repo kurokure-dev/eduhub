@@ -57,7 +57,9 @@ public class EnrollmentService {
       session.occupySeat();
       enrollment = Enrollment.confirmed(session, trimmed, now);
     } else {
-      enrollment = Enrollment.waiting(session, trimmed, now);
+      // 회차 행 락 안에서 읽으므로 같은 회차의 키 부여가 직렬화된다 (D-46)
+      long key = enrollmentRepository.findMaxWaitingOrder(sessionId).orElse(0L) + 1;
+      enrollment = Enrollment.waiting(session, trimmed, now, key);
     }
 
     try {

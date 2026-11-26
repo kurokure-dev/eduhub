@@ -66,10 +66,11 @@ class EnrollmentRepositoryTest {
   @Test
   @DisplayName("R1 같은 회차·사번의 WAITING 중복 저장은 유일 인덱스로 거부된다")
   void duplicateActiveRejected() {
-    enrollmentRepository.saveAndFlush(Enrollment.waiting(session, employeeA, NOW));
+    enrollmentRepository.saveAndFlush(Enrollment.waiting(session, employeeA, NOW, 1L));
 
     assertThatThrownBy(
-            () -> enrollmentRepository.saveAndFlush(Enrollment.waiting(session, employeeA, NOW)))
+            () ->
+                enrollmentRepository.saveAndFlush(Enrollment.waiting(session, employeeA, NOW, 2L)))
         .isInstanceOf(DataIntegrityViolationException.class)
         .rootCause()
         .hasMessageContaining("ux_enrollment_active");
@@ -88,10 +89,10 @@ class EnrollmentRepositoryTest {
   }
 
   @Test
-  @DisplayName("R3 서로 다른 사번의 WAITING 두 행은 waiting_order가 모두 NULL이어도 저장된다")
-  void twoWaitingWithNullOrder() {
-    Enrollment a = enrollmentRepository.save(Enrollment.waiting(session, employeeA, NOW));
-    Enrollment b = enrollmentRepository.save(Enrollment.waiting(session, employeeB, NOW));
+  @DisplayName("R3 서로 다른 사번의 WAITING 두 행은 키 1과 2로 저장되고, 같은 키는 유일 인덱스로 거부된다 (D-39, D-46)")
+  void twoWaitingWithDistinctOrder() {
+    Enrollment a = enrollmentRepository.save(Enrollment.waiting(session, employeeA, NOW, 1L));
+    Enrollment b = enrollmentRepository.save(Enrollment.waiting(session, employeeB, NOW, 2L));
     entityManager.flush();
     entityManager.clear();
 
@@ -99,20 +100,58 @@ class EnrollmentRepositoryTest {
     assertThat(enrollmentRepository.findById(a.getId()))
         .get()
         .extracting(Enrollment::getWaitingOrder)
-        .isNull();
+        .isEqualTo(1L);
     assertThat(enrollmentRepository.findById(b.getId()))
         .get()
         .extracting(Enrollment::getWaitingOrder)
-        .isNull();
-    Number nullCount =
-        (Number)
-            entityManager
-                .createNativeQuery(
-                    "select count(*) from enrollment"
-                        + " where session_id = :sessionId and waiting_order is null")
-                .setParameter("sessionId", session.getId())
-                .getSingleResult();
-    assertThat(nullCount.intValue()).isEqualTo(2);
+        .isEqualTo(2L);
+
+    String employeeC = "C" + employeeA.substring(1);
+    assertThatThrownBy(
+            () ->
+                enrollmentRepository.saveAndFlush(Enrollment.waiting(session, employeeC, NOW, 2L)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .rootCause()
+        .hasMessageContaining("ux_enrollment_waiting_order");
+  }
+
+  @Test
+  @DisplayName("R3b 키 없는 WAITING 행은 CHECK 제약으로 거부된다 (D-39)")
+  void waitingWithoutOrderRejected() {
+    assertThatThrownBy(
+            () ->
+                entityManager
+                    .createNativeQuery(
+                        "insert into enrollment (session_id, employee_id, status, applied_at)"
+                            + " values (:sessionId, :employeeId, 'WAITING', :appliedAt)")
+                    .setParameter("sessionId", session.getId())
+                    .setParameter("employeeId", employeeA)
+                    .setParameter("appliedAt", NOW)
+                    .executeUpdate())
+        .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
+        .rootCause()
+        .hasMessageContaining("ck_enrollment_waiting_order");
+  }
+
+  @Test
+  @DisplayName("R3c findMaxWaitingOrder는 회차별 최대값을 돌려주고 대기가 없으면 빈 값이다 (D-46)")
+  void findMaxWaitingOrderPerSession() {
+    Course course =
+        courseRepository.save(
+            new Course("Other", "O-" + UUID.randomUUID().toString().substring(0, 8), null));
+    CourseSession other =
+        sessionRepository.save(new CourseSession(course, LocalDate.of(2026, 12, 9), "지사", 2));
+    entityManager.flush();
+
+    assertThat(enrollmentRepository.findMaxWaitingOrder(session.getId())).isEmpty();
+
+    enrollmentRepository.save(Enrollment.waiting(session, employeeA, NOW, 1L));
+    enrollmentRepository.save(Enrollment.waiting(session, employeeB, NOW, 2L));
+    enrollmentRepository.save(Enrollment.waiting(other, employeeA, NOW, 7L));
+    entityManager.flush();
+
+    assertThat(enrollmentRepository.findMaxWaitingOrder(session.getId())).contains(2L);
+    assertThat(enrollmentRepository.findMaxWaitingOrder(other.getId())).contains(7L);
   }
 
   @Test
