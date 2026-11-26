@@ -1,18 +1,23 @@
 package com.example.eduhub.course.controller;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.eduhub.auth.config.SecurityConfig;
 import com.example.eduhub.common.api.PageResponse;
 import com.example.eduhub.course.domain.CourseSessionStatus;
 import com.example.eduhub.course.domain.CourseStateException;
@@ -31,17 +36,71 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(AdminCourseController.class)
+@Import(SecurityConfig.class)
 class AdminCourseControllerTest {
 
   private static final String BASE = "/api/v1/admin/courses";
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private AdminCourseService adminCourseService;
+  @MockitoBean private JwtDecoder jwtDecoder;
+
+  private static RequestPostProcessor admin() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+  }
+
+  @Test
+  @DisplayName("D-43 토큰 없이 관리자 API를 부르면 401 ProblemDetail이고 서비스를 부르지 않는다")
+  void adminWithoutTokenIsUnauthorized() throws Exception {
+    mockMvc
+        .perform(get(BASE))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().exists("WWW-Authenticate"))
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.detail").value("인증이 필요합니다."));
+
+    verify(adminCourseService, never()).search(any(), any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("D-43 잘못된 토큰의 검증 예외 메시지는 401 본문에 새지 않는다")
+  void invalidTokenDetailIsNotLeaked() throws Exception {
+    given(jwtDecoder.decode("garbage")).willThrow(new BadJwtException("secret-detail"));
+
+    mockMvc
+        .perform(get(BASE).header("Authorization", "Bearer garbage"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(content().string(not(containsString("secret-detail"))));
+
+    verify(adminCourseService, never()).search(any(), any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("D-43 사원 권한으로 관리자 API를 부르면 403 ProblemDetail이다")
+  void adminWithEmployeeIsForbidden() throws Exception {
+    mockMvc
+        .perform(
+            post(BASE)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_EMPLOYEE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(COURSE_JSON))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.detail").value("권한이 없습니다."));
+
+    verify(adminCourseService, never()).create(any());
+  }
 
   private static final String COURSE_JSON =
       """
@@ -64,7 +123,7 @@ class AdminCourseControllerTest {
                 1));
 
     mockMvc
-        .perform(get(BASE).param("status", "CLOSED"))
+        .perform(get(BASE).with(admin()).param("status", "CLOSED"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].status").value("CLOSED"))
         .andExpect(jsonPath("$.totalElements").value(1));
@@ -74,7 +133,7 @@ class AdminCourseControllerTest {
   @DisplayName("허용하지 않은 필드로 정렬하면 400이다")
   void searchRejectsInvalidSort() throws Exception {
     mockMvc
-        .perform(get(BASE).param("sort", "description"))
+        .perform(get(BASE).with(admin()).param("sort", "description"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 
@@ -86,7 +145,7 @@ class AdminCourseControllerTest {
   void getDetailNotFound() throws Exception {
     given(adminCourseService.getDetail(99L)).willThrow(new CourseNotFoundException(99L));
 
-    mockMvc.perform(get(BASE + "/99")).andExpect(status().isNotFound());
+    mockMvc.perform(get(BASE + "/99").with(admin())).andExpect(status().isNotFound());
   }
 
   @Test
@@ -98,7 +157,8 @@ class AdminCourseControllerTest {
                 1L, "Spring 입문", "개발", "기초", CourseStatus.OPEN, List.of()));
 
     mockMvc
-        .perform(post(BASE).contentType(MediaType.APPLICATION_JSON).content(COURSE_JSON))
+        .perform(
+            post(BASE).with(admin()).contentType(MediaType.APPLICATION_JSON).content(COURSE_JSON))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.status").value("OPEN"));
@@ -110,6 +170,7 @@ class AdminCourseControllerTest {
     mockMvc
         .perform(
             post(BASE)
+                .with(admin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -129,7 +190,11 @@ class AdminCourseControllerTest {
         .willThrow(new CourseStateException("종료된 과정은 변경할 수 없습니다: 1"));
 
     mockMvc
-        .perform(put(BASE + "/1").contentType(MediaType.APPLICATION_JSON).content(COURSE_JSON))
+        .perform(
+            put(BASE + "/1")
+                .with(admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(COURSE_JSON))
         .andExpect(status().isConflict())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.detail").value("종료된 과정은 변경할 수 없습니다: 1"));
@@ -151,7 +216,7 @@ class AdminCourseControllerTest {
                         10L, LocalDate.of(2026, 12, 1), "본사", 20, CourseSessionStatus.CLOSED, 5))));
 
     mockMvc
-        .perform(post(BASE + "/1/close"))
+        .perform(post(BASE + "/1/close").with(admin()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CLOSED"))
         .andExpect(jsonPath("$.sessions[0].status").value("CLOSED"))
@@ -171,6 +236,7 @@ class AdminCourseControllerTest {
     mockMvc
         .perform(
             post(BASE + "/1/sessions")
+                .with(admin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(SESSION_JSON))
         .andExpect(status().isCreated())
@@ -185,6 +251,7 @@ class AdminCourseControllerTest {
     mockMvc
         .perform(
             put(BASE + "/1/sessions/10")
+                .with(admin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -204,6 +271,7 @@ class AdminCourseControllerTest {
     mockMvc
         .perform(
             put(BASE + "/1/sessions/10")
+                .with(admin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(SESSION_JSON))
         .andExpect(status().isConflict());
@@ -215,6 +283,8 @@ class AdminCourseControllerTest {
     given(adminCourseService.closeSession(2L, 10L))
         .willThrow(new CourseSessionNotFoundException(2L, 10L));
 
-    mockMvc.perform(post(BASE + "/2/sessions/10/close")).andExpect(status().isNotFound());
+    mockMvc
+        .perform(post(BASE + "/2/sessions/10/close").with(admin()))
+        .andExpect(status().isNotFound());
   }
 }

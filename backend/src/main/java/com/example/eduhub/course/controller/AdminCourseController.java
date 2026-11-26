@@ -33,8 +33,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 관리자의 과정·회차 관리 (FR-03). 인증 방식이 정해지기 전까지 권한 검사는 하지 않는다 (D-30). */
+/** 관리자의 과정·회차 관리 (FR-03). ADMIN 권한만 접근한다 (D-43). */
 @Tag(name = "AdminCourse", description = "관리자 교육과정·회차 관리")
+@ApiResponse(
+    responseCode = "401",
+    description = "인증 필요",
+    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+@ApiResponse(
+    responseCode = "403",
+    description = "관리자 권한 필요",
+    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
 @RestController
 @RequestMapping("/api/v1/admin/courses")
 public class AdminCourseController {

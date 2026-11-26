@@ -11,6 +11,11 @@
       "description": "Generated server url"
     }
   ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "tags": [
     {
       "name": "Enrollment",
@@ -19,6 +24,10 @@
     {
       "name": "Health",
       "description": "서버 상태 확인"
+    },
+    {
+      "name": "Auth",
+      "description": "로그인과 현재 사용자"
     },
     {
       "name": "AdminCourse",
@@ -56,6 +65,26 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminCourseDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -113,6 +142,26 @@
           },
           "400": {
             "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
             "content": {
               "*/*": {
                 "schema": {
@@ -203,6 +252,26 @@
               }
             }
           },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "없는 과정이나 회차",
             "content": {
@@ -232,7 +301,7 @@
           "Enrollment"
         ],
         "summary": "수강 신청",
-        "description": "회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.",
+        "description": "회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.",
         "operationId": "enroll",
         "parameters": [
           {
@@ -245,16 +314,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrollRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "description": "신청됨 (확정 또는 대기)",
@@ -266,8 +325,8 @@
               }
             }
           },
-          "400": {
-            "description": "사번이 비었거나 20자를 넘음",
+          "401": {
+            "description": "토큰이 없거나 유효하지 않음",
             "content": {
               "*/*": {
                 "schema": {
@@ -397,6 +456,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       },
@@ -430,6 +509,26 @@
           },
           "400": {
             "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
             "content": {
               "*/*": {
                 "schema": {
@@ -483,6 +582,26 @@
           },
           "400": {
             "description": "입력값 오류",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
             "content": {
               "*/*": {
                 "schema": {
@@ -553,6 +672,26 @@
               }
             }
           },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "없는 과정이나 회차",
             "content": {
@@ -606,6 +745,26 @@
               }
             }
           },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
           "404": {
             "description": "없는 과정",
             "content": {
@@ -627,6 +786,59 @@
             }
           }
         }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "로그인",
+        "description": "사번과 비밀번호로 로그인해 액세스 토큰(JWT)을 받는다 (D-42). 사번이 없을 때와 비밀번호가 틀릴 때 응답이 같다.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "로그인됨",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "사번이나 비밀번호가 비었거나 너무 김",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "사번 또는 비밀번호가 올바르지 않음",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": []
       }
     },
     "/api/v1/courses": {
@@ -715,7 +927,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/api/v1/courses/{id}": {
@@ -758,7 +971,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/api/v1/courses/categories": {
@@ -779,6 +993,39 @@
                   "items": {
                     "type": "string"
                   }
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "현재 사용자 조회",
+        "description": "토큰의 사원 id로 DB를 다시 조회한다 (D-42).",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "토큰이 없거나 유효하지 않음, 사원이 없음",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -805,7 +1052,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     }
   },
@@ -972,21 +1220,6 @@
           "startDate"
         ]
       },
-      "EnrollRequest": {
-        "type": "object",
-        "properties": {
-          "employeeId": {
-            "type": "string",
-            "description": "사번",
-            "example": "E2024001",
-            "maxLength": 20,
-            "minLength": 0
-          }
-        },
-        "required": [
-          "employeeId"
-        ]
-      },
       "EnrollmentResponse": {
         "type": "object",
         "properties": {
@@ -1013,6 +1246,79 @@
           "appliedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "employeeNo": {
+            "type": "string",
+            "description": "사번",
+            "example": "DEV-E001",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "employeeNo",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "액세스 토큰(JWT)"
+          },
+          "tokenType": {
+            "type": "string",
+            "description": "토큰 종류",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "만료까지 남은 초",
+            "example": 3600
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse",
+            "description": "로그인한 사용자"
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "사원 id"
+          },
+          "employeeNo": {
+            "type": "string",
+            "description": "사번",
+            "example": "DEV-E001"
+          },
+          "name": {
+            "type": "string",
+            "description": "이름"
+          },
+          "role": {
+            "type": "string",
+            "description": "역할",
+            "enum": [
+              "EMPLOYEE",
+              "ADMIN"
+            ]
           }
         }
       },
@@ -1154,6 +1460,13 @@
             "type": "string"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }

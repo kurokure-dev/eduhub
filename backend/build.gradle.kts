@@ -26,9 +26,13 @@ dependencies {
     implementation("org.flywaydb:flyway-sqlserver")
     // NFR-04: 모든 API의 OpenAPI 문서 (Swagger UI: /swagger-ui.html)
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
+    // NFR-03: JWT 인증 (Spring Security + oauth2-resource-server의 기본 JWT 검증, 직접 만든 필터 없음)
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     runtimeOnly("com.microsoft.sqlserver:mssql-jdbc")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

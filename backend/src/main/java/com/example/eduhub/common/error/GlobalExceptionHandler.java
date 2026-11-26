@@ -19,6 +19,11 @@ public class GlobalExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
   }
 
+  @ExceptionHandler(UnauthorizedException.class)
+  public ProblemDetail handleUnauthorized(UnauthorizedException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+  }
+
   @ExceptionHandler(InvalidSortException.class)
   public ProblemDetail handleInvalidSort(InvalidSortException e) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());

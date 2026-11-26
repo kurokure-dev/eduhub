@@ -12,6 +12,11 @@ spring:
       # 스키마는 Flyway만 바꾼다. Hibernate는 엔티티와 스키마가 맞는지 검사만 한다
       ddl-auto: validate
 
+eduhub:
+  dev-accounts:
+    # NFR-03: dev 프로필 개발용 계정 비밀번호. 비어 있으면 계정을 만들지 않는다
+    password: ${EDUHUB_DEV_PASSWORD:}
+
 logging:
   level:
     # NFR-02: 실행되는 SQL을 로그로 보고 N+1을 찾는다
