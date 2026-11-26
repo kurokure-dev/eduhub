@@ -95,12 +95,6 @@ export interface CourseSummaryResponse {
     'title'?: string;
     'category'?: string;
 }
-export interface EnrollRequest {
-    /**
-     * 사번
-     */
-    'employeeId': string;
-}
 export interface EnrollmentResponse {
     'id'?: number;
     'sessionId'?: number;
@@ -120,6 +114,34 @@ export type EnrollmentResponseStatusEnum = typeof EnrollmentResponseStatusEnum[k
 
 export interface HealthResponse {
     'status'?: string;
+}
+export interface LoginRequest {
+    /**
+     * 사번
+     */
+    'employeeNo': string;
+    /**
+     * 비밀번호
+     */
+    'password': string;
+}
+export interface LoginResponse {
+    /**
+     * 액세스 토큰(JWT)
+     */
+    'accessToken'?: string;
+    /**
+     * 토큰 종류
+     */
+    'tokenType'?: string;
+    /**
+     * 만료까지 남은 초
+     */
+    'expiresIn'?: number;
+    /**
+     * 로그인한 사용자
+     */
+    'user'?: UserResponse;
 }
 export interface PageResponseAdminCourseSummaryResponse {
     'content'?: Array<AdminCourseSummaryResponse>;
@@ -162,6 +184,32 @@ export interface SessionResponse {
     'capacity'?: number;
     'remainingSeats'?: number;
 }
+export interface UserResponse {
+    /**
+     * 사원 id
+     */
+    'id'?: number;
+    /**
+     * 사번
+     */
+    'employeeNo'?: string;
+    /**
+     * 이름
+     */
+    'name'?: string;
+    /**
+     * 역할
+     */
+    'role'?: UserResponseRoleEnum;
+}
+
+export const UserResponseRoleEnum = {
+    Employee: 'EMPLOYEE',
+    Admin: 'ADMIN',
+} as const;
+
+export type UserResponseRoleEnum = typeof UserResponseRoleEnum[keyof typeof UserResponseRoleEnum];
+
 
 /**
  * AdminCourseApi - axios parameter creator
@@ -190,6 +238,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
             localVarHeaderParameter['Accept'] = '*/*';
 
@@ -229,6 +281,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
             localVarHeaderParameter['Accept'] = '*/*';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -261,6 +317,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
             localVarHeaderParameter['Content-Type'] = 'application/json';
             localVarHeaderParameter['Accept'] = '*/*';
@@ -301,6 +361,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
             localVarHeaderParameter['Content-Type'] = 'application/json';
             localVarHeaderParameter['Accept'] = '*/*';
 
@@ -337,6 +401,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
             localVarHeaderParameter['Accept'] = '*/*';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -372,6 +440,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
             if (status !== undefined) {
                 localVarQueryParameter['status'] = status;
@@ -434,6 +506,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
             localVarHeaderParameter['Content-Type'] = 'application/json';
             localVarHeaderParameter['Accept'] = '*/*';
 
@@ -476,6 +552,10 @@ export const AdminCourseApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
             localVarHeaderParameter['Content-Type'] = 'application/json';
             localVarHeaderParameter['Accept'] = '*/*';
@@ -900,6 +980,180 @@ export type SearchAdminCoursesStatusEnum = typeof SearchAdminCoursesStatusEnum[k
 
 
 /**
+ * AuthApi - axios parameter creator
+ */
+export const AuthApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 사번과 비밀번호로 로그인해 액세스 토큰(JWT)을 받는다 (D-42). 사번이 없을 때와 비밀번호가 틀릴 때 응답이 같다.
+         * @summary 로그인
+         * @param {LoginRequest} loginRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        login: async (loginRequest: LoginRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'loginRequest' is not null or undefined
+            assertParamExists('login', 'loginRequest', loginRequest)
+            const localVarPath = `/api/auth/login`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(loginRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 토큰의 사원 id로 DB를 다시 조회한다 (D-42).
+         * @summary 현재 사용자 조회
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        me: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/me`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * AuthApi - functional programming interface
+ */
+export const AuthApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = AuthApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 사번과 비밀번호로 로그인해 액세스 토큰(JWT)을 받는다 (D-42). 사번이 없을 때와 비밀번호가 틀릴 때 응답이 같다.
+         * @summary 로그인
+         * @param {LoginRequest} loginRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async login(loginRequest: LoginRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LoginResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.login(loginRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthApi.login']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 토큰의 사원 id로 DB를 다시 조회한다 (D-42).
+         * @summary 현재 사용자 조회
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async me(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.me(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthApi.me']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * AuthApi - factory interface
+ */
+export const AuthApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = AuthApiFp(configuration)
+    return {
+        /**
+         * 사번과 비밀번호로 로그인해 액세스 토큰(JWT)을 받는다 (D-42). 사번이 없을 때와 비밀번호가 틀릴 때 응답이 같다.
+         * @summary 로그인
+         * @param {AuthApiLoginRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        login(requestParameters: AuthApiLoginRequest, options?: RawAxiosRequestConfig): AxiosPromise<LoginResponse> {
+            return localVarFp.login(requestParameters.loginRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 토큰의 사원 id로 DB를 다시 조회한다 (D-42).
+         * @summary 현재 사용자 조회
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        me(options?: RawAxiosRequestConfig): AxiosPromise<UserResponse> {
+            return localVarFp.me(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for login operation in AuthApi.
+ */
+export interface AuthApiLoginRequest {
+    readonly loginRequest: LoginRequest
+}
+
+/**
+ * AuthApi - object-oriented interface
+ */
+export class AuthApi extends BaseAPI {
+    /**
+     * 사번과 비밀번호로 로그인해 액세스 토큰(JWT)을 받는다 (D-42). 사번이 없을 때와 비밀번호가 틀릴 때 응답이 같다.
+     * @summary 로그인
+     * @param {AuthApiLoginRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public login(requestParameters: AuthApiLoginRequest, options?: RawAxiosRequestConfig) {
+        return AuthApiFp(this.configuration).login(requestParameters.loginRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 토큰의 사원 id로 DB를 다시 조회한다 (D-42).
+     * @summary 현재 사용자 조회
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public me(options?: RawAxiosRequestConfig) {
+        return AuthApiFp(this.configuration).me(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
  * CourseApi - axios parameter creator
  */
 export const CourseApiAxiosParamCreator = function (configuration?: Configuration) {
@@ -1197,18 +1451,15 @@ export class CourseApi extends BaseAPI {
 export const EnrollmentApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {number} sessionId 
-         * @param {EnrollRequest} enrollRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        enroll: async (sessionId: number, enrollRequest: EnrollRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        enroll: async (sessionId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'sessionId' is not null or undefined
             assertParamExists('enroll', 'sessionId', sessionId)
-            // verify required parameter 'enrollRequest' is not null or undefined
-            assertParamExists('enroll', 'enrollRequest', enrollRequest)
             const localVarPath = `/api/v1/sessions/{sessionId}/enrollments`
                 .replace('{sessionId}', encodeURIComponent(String(sessionId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -1222,13 +1473,15 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
             localVarHeaderParameter['Accept'] = '*/*';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(enrollRequest, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1245,15 +1498,14 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = EnrollmentApiAxiosParamCreator(configuration)
     return {
         /**
-         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {number} sessionId 
-         * @param {EnrollRequest} enrollRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async enroll(sessionId: number, enrollRequest: EnrollRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.enroll(sessionId, enrollRequest, options);
+        async enroll(sessionId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.enroll(sessionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['EnrollmentApi.enroll']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1268,14 +1520,14 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
     const localVarFp = EnrollmentApiFp(configuration)
     return {
         /**
-         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+         * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {EnrollmentApiEnrollRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
         enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig): AxiosPromise<EnrollmentResponse> {
-            return localVarFp.enroll(requestParameters.sessionId, requestParameters.enrollRequest, options).then((request) => request(axios, basePath));
+            return localVarFp.enroll(requestParameters.sessionId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -1285,8 +1537,6 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
  */
 export interface EnrollmentApiEnrollRequest {
     readonly sessionId: number
-
-    readonly enrollRequest: EnrollRequest
 }
 
 /**
@@ -1294,14 +1544,14 @@ export interface EnrollmentApiEnrollRequest {
  */
 export class EnrollmentApi extends BaseAPI {
     /**
-     * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 인증 도입 전까지 사번을 본문으로 받는다 (D-36). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
+     * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
      * @summary 수강 신청
      * @param {EnrollmentApiEnrollRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     public enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig) {
-        return EnrollmentApiFp(this.configuration).enroll(requestParameters.sessionId, requestParameters.enrollRequest, options).then((request) => request(this.axios, this.basePath));
+        return EnrollmentApiFp(this.configuration).enroll(requestParameters.sessionId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
