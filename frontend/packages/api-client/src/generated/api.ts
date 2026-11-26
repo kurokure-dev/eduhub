@@ -143,6 +143,50 @@ export interface LoginResponse {
      */
     'user'?: UserResponse;
 }
+export interface MyEnrollmentResponse {
+    /**
+     * 신청 ID
+     */
+    'enrollmentId'?: number;
+    /**
+     * 회차 ID
+     */
+    'sessionId'?: number;
+    /**
+     * 과정 제목
+     */
+    'courseTitle'?: string;
+    /**
+     * 회차 시작일 (표시용, D-02)
+     */
+    'sessionStartDate'?: string;
+    /**
+     * 회차 장소
+     */
+    'sessionPlace'?: string;
+    /**
+     * 신청 상태
+     */
+    'status'?: MyEnrollmentResponseStatusEnum;
+    /**
+     * 현재 대기 순번(1부터). WAITING일 때만 값이 있다 (D-09)
+     */
+    'waitingRank'?: number | null;
+    /**
+     * 신청 일시
+     */
+    'appliedAt'?: string;
+}
+
+export const MyEnrollmentResponseStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+} as const;
+
+export type MyEnrollmentResponseStatusEnum = typeof MyEnrollmentResponseStatusEnum[keyof typeof MyEnrollmentResponseStatusEnum];
+
 export interface PageResponseAdminCourseSummaryResponse {
     'content'?: Array<AdminCourseSummaryResponse>;
     'page'?: number;
@@ -1488,6 +1532,45 @@ export const EnrollmentApiAxiosParamCreator = function (configuration?: Configur
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 로그인한 사용자의 신청 내역을 최근 신청순으로 돌려준다. 대기(WAITING) 건에는 현재 대기 순번(waitingRank)이 붙는다 (D-09). 대상은 요청 값이 아니라 로그인 토큰의 사번으로 정해진다 (D-44).
+         * @summary 내 신청 내역 조회
+         * @param {FindMineStatusEnum} [status] 상태 (없으면 전체)
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        findMine: async (status?: FindMineStatusEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/me/enrollments`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (status !== undefined) {
+                localVarQueryParameter['status'] = status;
+            }
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1510,6 +1593,19 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['EnrollmentApi.enroll']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * 로그인한 사용자의 신청 내역을 최근 신청순으로 돌려준다. 대기(WAITING) 건에는 현재 대기 순번(waitingRank)이 붙는다 (D-09). 대상은 요청 값이 아니라 로그인 토큰의 사번으로 정해진다 (D-44).
+         * @summary 내 신청 내역 조회
+         * @param {FindMineStatusEnum} [status] 상태 (없으면 전체)
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async findMine(status?: FindMineStatusEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<MyEnrollmentResponse>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.findMine(status, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnrollmentApi.findMine']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -1529,6 +1625,16 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
         enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig): AxiosPromise<EnrollmentResponse> {
             return localVarFp.enroll(requestParameters.sessionId, options).then((request) => request(axios, basePath));
         },
+        /**
+         * 로그인한 사용자의 신청 내역을 최근 신청순으로 돌려준다. 대기(WAITING) 건에는 현재 대기 순번(waitingRank)이 붙는다 (D-09). 대상은 요청 값이 아니라 로그인 토큰의 사번으로 정해진다 (D-44).
+         * @summary 내 신청 내역 조회
+         * @param {EnrollmentApiFindMineRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        findMine(requestParameters: EnrollmentApiFindMineRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<Array<MyEnrollmentResponse>> {
+            return localVarFp.findMine(requestParameters.status, options).then((request) => request(axios, basePath));
+        },
     };
 };
 
@@ -1537,6 +1643,16 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
  */
 export interface EnrollmentApiEnrollRequest {
     readonly sessionId: number
+}
+
+/**
+ * Request parameters for findMine operation in EnrollmentApi.
+ */
+export interface EnrollmentApiFindMineRequest {
+    /**
+     * 상태 (없으면 전체)
+     */
+    readonly status?: FindMineStatusEnum
 }
 
 /**
@@ -1553,8 +1669,26 @@ export class EnrollmentApi extends BaseAPI {
     public enroll(requestParameters: EnrollmentApiEnrollRequest, options?: RawAxiosRequestConfig) {
         return EnrollmentApiFp(this.configuration).enroll(requestParameters.sessionId, options).then((request) => request(this.axios, this.basePath));
     }
+
+    /**
+     * 로그인한 사용자의 신청 내역을 최근 신청순으로 돌려준다. 대기(WAITING) 건에는 현재 대기 순번(waitingRank)이 붙는다 (D-09). 대상은 요청 값이 아니라 로그인 토큰의 사번으로 정해진다 (D-44).
+     * @summary 내 신청 내역 조회
+     * @param {EnrollmentApiFindMineRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public findMine(requestParameters: EnrollmentApiFindMineRequest = {}, options?: RawAxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).findMine(requestParameters.status, options).then((request) => request(this.axios, this.basePath));
+    }
 }
 
+export const FindMineStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+} as const;
+export type FindMineStatusEnum = typeof FindMineStatusEnum[keyof typeof FindMineStatusEnum];
 
 
 /**
