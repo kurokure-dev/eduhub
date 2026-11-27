@@ -89,6 +89,14 @@ public class CourseSession {
     confirmedCount++;
   }
 
+  /** 확정 자리 하나를 비운다 (D-52). 확정 인원이 0이면 정합성 오류이므로 예외다. 회차 행 락을 잡은 상태에서만 부른다 (D-29). */
+  public void releaseSeat() {
+    if (confirmedCount <= 0) {
+      throw new CourseStateException("비울 확정 자리가 없습니다: " + id);
+    }
+    confirmedCount--;
+  }
+
   public boolean hasRemainingSeat() {
     return confirmedCount < capacity;
   }

@@ -10,10 +10,12 @@ import App from './App';
 import { useCategories } from './hooks/useCategories';
 import { useCourseDetail } from './hooks/useCourseDetail';
 import { useCourses } from './hooks/useCourses';
+import { useMyEnrollments } from './hooks/useMyEnrollments';
 
 vi.mock('./hooks/useCourses');
 vi.mock('./hooks/useCategories');
 vi.mock('./hooks/useCourseDetail');
+vi.mock('./hooks/useMyEnrollments');
 vi.mock('./api/clients', () => ({ authApi: { me: vi.fn(), login: vi.fn() } }));
 
 function renderApp(path: string) {
@@ -37,11 +39,13 @@ describe('App 라우팅 (D-24)', () => {
       loading: false,
       error: undefined,
     });
+    vi.mocked(useMyEnrollments).mockReturnValue({ data: [], loading: false, error: undefined, reload: vi.fn() });
     vi.mocked(useCourseDetail).mockReturnValue({
-      data: { id: 1, title: 'Spring 입문 상세', sessions: [] },
+      data: { id: 1, title: 'Spring 입문 상세', category: '', description: '', closed: false, sessions: [] },
       loading: false,
       notFound: false,
       error: undefined,
+      refresh: vi.fn(),
     });
   });
 
@@ -62,7 +66,7 @@ describe('App 라우팅 (D-24)', () => {
 
     await userEvent.click(screen.getByRole('link', { name: 'Spring 입문' }));
     expect(screen.getByRole('heading', { name: 'Spring 입문 상세' })).toBeInTheDocument();
-    expect(useCourseDetail).toHaveBeenLastCalledWith('1');
+    expect(useCourseDetail).toHaveBeenLastCalledWith('1', { admin: false, enabled: true });
 
     await userEvent.click(screen.getByRole('link', { name: /과정 목록/ }));
     expect(screen.getByRole('heading', { name: '교육과정' })).toBeInTheDocument();
@@ -145,11 +149,11 @@ describe('App 라우팅 (D-24)', () => {
       expect(await screen.findByText('권한이 없습니다.')).toBeInTheDocument();
     });
 
-    it('로그인한 사용자는 /my/enrollments에서 준비 중 화면을 본다', async () => {
+    it('로그인한 사용자는 /my/enrollments에서 내 신청 내역을 본다', async () => {
       loginAs('EMPLOYEE');
       renderApp('/my/enrollments');
 
-      expect(await screen.findByText('준비 중인 화면입니다.')).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: '내 신청 내역' })).toBeInTheDocument();
     });
   });
 });

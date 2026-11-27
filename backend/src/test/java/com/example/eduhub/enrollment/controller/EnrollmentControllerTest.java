@@ -47,12 +47,12 @@ class EnrollmentControllerTest {
   }
 
   @Test
-  @DisplayName("C1 확정과 대기 모두 201이고 waitingNumber 필드가 없다")
+  @DisplayName("C1 확정과 대기 모두 201이고 대기일 때만 waitingRank가 있다 (D-53)")
   void enrollReturnsCreated() throws Exception {
     given(enrollmentService.enroll(3L, "E1"))
-        .willReturn(new EnrollmentResponse(1L, 3L, "E1", EnrollmentStatus.CONFIRMED, NOW));
+        .willReturn(new EnrollmentResponse(1L, 3L, "E1", EnrollmentStatus.CONFIRMED, null, NOW));
     given(enrollmentService.enroll(3L, "E2"))
-        .willReturn(new EnrollmentResponse(2L, 3L, "E2", EnrollmentStatus.WAITING, NOW));
+        .willReturn(new EnrollmentResponse(2L, 3L, "E2", EnrollmentStatus.WAITING, 4L, NOW));
 
     mockMvc
         .perform(post(URL).with(token("E1")))
@@ -61,20 +61,22 @@ class EnrollmentControllerTest {
         .andExpect(jsonPath("$.sessionId").value(3))
         .andExpect(jsonPath("$.employeeId").value("E1"))
         .andExpect(jsonPath("$.status").value("CONFIRMED"))
-        .andExpect(jsonPath("$.waitingNumber").doesNotExist());
+        .andExpect(jsonPath("$.waitingNumber").doesNotExist())
+        .andExpect(jsonPath("$.waitingRank").isEmpty());
 
     mockMvc
         .perform(post(URL).with(token("E2")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.status").value("WAITING"))
-        .andExpect(jsonPath("$.waitingNumber").doesNotExist());
+        .andExpect(jsonPath("$.waitingNumber").doesNotExist())
+        .andExpect(jsonPath("$.waitingRank").value(4));
   }
 
   @Test
   @DisplayName("C2 본문에 다른 사번을 넣어도 토큰의 사번으로 서비스를 부른다 (D-44)")
   void enrollUsesTokenEmployeeNo() throws Exception {
     given(enrollmentService.enroll(3L, "E1"))
-        .willReturn(new EnrollmentResponse(1L, 3L, "E1", EnrollmentStatus.CONFIRMED, NOW));
+        .willReturn(new EnrollmentResponse(1L, 3L, "E1", EnrollmentStatus.CONFIRMED, null, NOW));
 
     mockMvc
         .perform(

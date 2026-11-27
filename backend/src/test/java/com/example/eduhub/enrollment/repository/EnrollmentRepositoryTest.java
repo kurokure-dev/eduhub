@@ -7,8 +7,10 @@ import com.example.eduhub.course.domain.Course;
 import com.example.eduhub.course.domain.CourseSession;
 import com.example.eduhub.course.repository.CourseRepository;
 import com.example.eduhub.course.repository.CourseSessionRepository;
+import com.example.eduhub.course.service.SessionLockService;
 import com.example.eduhub.enrollment.domain.Enrollment;
 import com.example.eduhub.enrollment.domain.EnrollmentStatus;
+import com.example.eduhub.enrollment.service.EnrollmentCancelService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import java.time.LocalDate;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -29,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
+@Import({EnrollmentCancelService.class, SessionLockService.class})
 class EnrollmentRepositoryTest {
 
   private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 12, 9, 0);
@@ -37,6 +41,7 @@ class EnrollmentRepositoryTest {
   @Autowired private CourseSessionRepository sessionRepository;
   @Autowired private EnrollmentRepository enrollmentRepository;
   @Autowired private EntityManager entityManager;
+  @Autowired private EnrollmentCancelService cancelService;
 
   private CourseSession session;
   private String employeeA;
@@ -152,6 +157,127 @@ class EnrollmentRepositoryTest {
 
     assertThat(enrollmentRepository.findMaxWaitingOrder(session.getId())).contains(2L);
     assertThat(enrollmentRepository.findMaxWaitingOrder(other.getId())).contains(7L);
+  }
+
+  @Test
+  @DisplayName("R3d 대기 1·2·3 중 2를 취소하면 3의 순번이 2로 당겨진다 (D-01, D-39)")
+  void cancelWaitingPullsUpRank() {
+    String suffix = employeeA.substring(1);
+    Enrollment first =
+        enrollmentRepository.save(Enrollment.waiting(session, "W1" + suffix, NOW, 1L));
+    Enrollment second =
+        enrollmentRepository.save(Enrollment.waiting(session, "W2" + suffix, NOW, 2L));
+    enrollmentRepository.save(Enrollment.waiting(session, "W3" + suffix, NOW, 3L));
+    entityManager.flush();
+    entityManager.clear();
+    assertThat(enrollmentRepository.findMine("W3" + suffix, null).get(0).waitingRank())
+        .isEqualTo(3L);
+
+    enrollmentRepository.findById(second.getId()).orElseThrow().cancel();
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(enrollmentRepository.findMine("W1" + suffix, null).get(0).waitingRank())
+        .isEqualTo(1L);
+    assertThat(enrollmentRepository.findMine("W3" + suffix, null).get(0).waitingRank())
+        .isEqualTo(2L);
+    var cancelled = enrollmentRepository.findMine("W2" + suffix, null).get(0);
+    assertThat(cancelled.status()).isEqualTo(EnrollmentStatus.CANCELLED);
+    assertThat(cancelled.waitingRank()).isNull();
+    assertThat(first.getId()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("R7 findSessionIdByIdAndEmployeeId는 본인 사번이면 회차 id, 아니면 빈 값이다 (D-45, D-48 CI 콜레이션)")
+  void findSessionIdByIdAndEmployeeId() {
+    Enrollment e = enrollmentRepository.saveAndFlush(Enrollment.confirmed(session, employeeA, NOW));
+    entityManager.clear();
+
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), employeeA))
+        .contains(session.getId());
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), employeeB)).isEmpty();
+    assertThat(enrollmentRepository.findSessionIdByIdAndEmployeeId(-1L, employeeA)).isEmpty();
+    assertThat(
+            enrollmentRepository.findSessionIdByIdAndEmployeeId(e.getId(), employeeA.toLowerCase()))
+        .as("대소문자만 다른 사번도 일치 (CI 콜레이션)")
+        .contains(session.getId());
+  }
+
+  @Test
+  @DisplayName("R8 승급 대상은 대기 키가 가장 작은 WAITING이고 확정·취소 행은 무시한다 (D-01)")
+  void findFirstWaitingByOrder() {
+    String s = employeeA.substring(1);
+    enrollmentRepository.save(Enrollment.waiting(session, "W3" + s, NOW, 3L));
+    enrollmentRepository.save(Enrollment.waiting(session, "W1" + s, NOW, 1L));
+    enrollmentRepository.save(Enrollment.waiting(session, "W2" + s, NOW, 2L));
+    enrollmentRepository.save(Enrollment.confirmed(session, "C" + s, NOW));
+    insertCancelled("X" + s);
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(
+            enrollmentRepository.findFirstBySessionIdAndStatusOrderByWaitingOrderAsc(
+                session.getId(), EnrollmentStatus.WAITING))
+        .get()
+        .extracting(Enrollment::getEmployeeId)
+        .isEqualTo("W1" + s);
+  }
+
+  @Test
+  @DisplayName("R9 countBySessionIdAndStatus는 다른 회차·다른 상태를 세지 않는다 (D-53)")
+  void countBySessionAndStatus() {
+    Course course =
+        courseRepository.save(
+            new Course("Other", "O-" + UUID.randomUUID().toString().substring(0, 8), null));
+    CourseSession other =
+        sessionRepository.save(new CourseSession(course, LocalDate.of(2026, 12, 9), "지사", 5));
+    String s = employeeA.substring(1);
+    enrollmentRepository.save(Enrollment.waiting(session, "W1" + s, NOW, 1L));
+    enrollmentRepository.save(Enrollment.waiting(session, "W2" + s, NOW, 2L));
+    enrollmentRepository.save(Enrollment.confirmed(session, "C" + s, NOW));
+    enrollmentRepository.save(Enrollment.waiting(other, "W1" + s, NOW, 1L));
+    insertCancelled("X" + s);
+    entityManager.flush();
+
+    assertThat(
+            enrollmentRepository.countBySessionIdAndStatus(
+                session.getId(), EnrollmentStatus.WAITING))
+        .isEqualTo(2L);
+    assertThat(
+            enrollmentRepository.countBySessionIdAndStatus(
+                session.getId(), EnrollmentStatus.CONFIRMED))
+        .isEqualTo(1L);
+    assertThat(
+            enrollmentRepository.countBySessionIdAndStatus(other.getId(), EnrollmentStatus.WAITING))
+        .isEqualTo(1L);
+  }
+
+  @Test
+  @DisplayName("R10 확정 취소 → 승급이 실제 DB의 CHECK·유일 제약을 통과한다 (D-01, D-46, D-52)")
+  void cancelConfirmedPromotesWithRealConstraints() {
+    String s = employeeA.substring(1);
+    session.occupySeat();
+    session.occupySeat();
+    Enrollment c1 = enrollmentRepository.save(Enrollment.confirmed(session, "C1" + s, NOW));
+    enrollmentRepository.save(Enrollment.confirmed(session, "C2" + s, NOW));
+    Enrollment w1 = enrollmentRepository.save(Enrollment.waiting(session, "W1" + s, NOW, 1L));
+    Enrollment w2 = enrollmentRepository.save(Enrollment.waiting(session, "W2" + s, NOW, 2L));
+    entityManager.flush();
+    entityManager.clear();
+
+    cancelService.cancel(c1.getId(), "C1" + s);
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(enrollmentRepository.findById(c1.getId()).orElseThrow().getStatus())
+        .isEqualTo(EnrollmentStatus.CANCELLED);
+    Enrollment promoted = enrollmentRepository.findById(w1.getId()).orElseThrow();
+    assertThat(promoted.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+    assertThat(promoted.getWaitingOrder()).isNull();
+    assertThat(enrollmentRepository.findById(w2.getId()).orElseThrow().getWaitingOrder())
+        .isEqualTo(2L);
+    assertThat(sessionRepository.findById(session.getId()).orElseThrow().getConfirmedCount())
+        .isEqualTo(2);
   }
 
   @Test

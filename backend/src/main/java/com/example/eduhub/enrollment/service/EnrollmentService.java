@@ -74,7 +74,12 @@ public class EnrollmentService {
       }
       throw e;
     }
-    return EnrollmentResponse.from(enrollment);
+    // 새 대기의 키는 회차 최대값이므로 순번은 회차의 대기 수다 (D-53)
+    Long waitingRank =
+        enrollment.getStatus() == EnrollmentStatus.WAITING
+            ? enrollmentRepository.countBySessionIdAndStatus(sessionId, EnrollmentStatus.WAITING)
+            : null;
+    return EnrollmentResponse.from(enrollment, waitingRank);
   }
 
   private static boolean causedByActiveIndex(Throwable e) {

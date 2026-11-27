@@ -11,6 +11,8 @@ import com.example.eduhub.course.service.AdminCourseService;
 import com.example.eduhub.enrollment.domain.EnrollmentStatus;
 import com.example.eduhub.enrollment.dto.EnrollmentResponse;
 import com.example.eduhub.enrollment.service.DuplicateEnrollmentException;
+import com.example.eduhub.enrollment.service.EnrollmentCancelService;
+import com.example.eduhub.enrollment.service.EnrollmentNotCancellableException;
 import com.example.eduhub.enrollment.service.EnrollmentService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -56,6 +58,7 @@ class EnrollmentConcurrencyTest {
   private static final long TIMEOUT_SECONDS = 120;
 
   @Autowired private EnrollmentService enrollmentService;
+  @Autowired private EnrollmentCancelService enrollmentCancelService;
   @Autowired private AdminCourseService adminCourseService;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TransactionTemplate transactionTemplate;
@@ -117,6 +120,16 @@ class EnrollmentConcurrencyTest {
             .filter(r -> r.status() == EnrollmentStatus.CONFIRMED)
             .count();
     assertThat(confirmedResponses).as("응답 중 CONFIRMED").isEqualTo(1);
+    List<Long> waitingRanks =
+        outcomes.stream()
+            .map(o -> (EnrollmentResponse) o.value())
+            .filter(r -> r.status() == EnrollmentStatus.WAITING)
+            .map(EnrollmentResponse::waitingRank)
+            .sorted()
+            .toList();
+    assertThat(waitingRanks)
+        .as("WAITING 응답의 waitingRank는 1~99로 중복 없음 (D-53)")
+        .containsExactlyElementsOf(LongStream.rangeClosed(1, 99).boxed().toList());
 
     assertThat(countByStatus(ids.sessionId(), "CONFIRMED")).isEqualTo(10);
     assertThat(confirmedCount(ids.sessionId())).isEqualTo(10);
@@ -207,6 +220,127 @@ class EnrollmentConcurrencyTest {
         jdbcTemplate.queryForObject(
             "SELECT place FROM course_session WHERE id = ?", String.class, ids.sessionId());
     assertThat(place).as("관리자 수정이 반영된 장소").isIn(changedPlaces);
+  }
+
+  @Test
+  @DisplayName("확정 취소와 신규 신청이 섞여도 정원을 넘지 않고 confirmed_count가 어긋나지 않는다 (NFR-01, D-01, D-52)")
+  void cancelAndEnrollConcurrently() throws Exception {
+    String prefix = uniquePrefix();
+    SessionIds ids = createSession(10, prefix);
+    List<Long> confirmedIds = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      confirmedIds.add(enrollmentService.enroll(ids.sessionId(), prefix + "-P" + i).id());
+    }
+    // 대기 5명이 이미 있어서, 취소가 나면 대기 1순위가 승급한다
+    for (int i = 0; i < 5; i++) {
+      EnrollmentResponse w = enrollmentService.enroll(ids.sessionId(), prefix + "-W" + i);
+      assertThat(w.status()).isEqualTo(EnrollmentStatus.WAITING);
+    }
+
+    List<Callable<Object>> tasks = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      Long enrollmentId = confirmedIds.get(i);
+      String employeeId = prefix + "-P" + i;
+      tasks.add(() -> enrollmentCancelService.cancel(enrollmentId, employeeId));
+    }
+    for (int i = 0; i < 30; i++) {
+      String employeeId = prefix + "-N" + i;
+      tasks.add(() -> enrollmentService.enroll(ids.sessionId(), employeeId));
+    }
+    List<Outcome> outcomes = runConcurrently(tasks);
+
+    assertThat(errorsByType(outcomes)).as("예외 타입별 건수").isEmpty();
+    assertThat(countByStatus(ids.sessionId(), "CANCELLED")).isEqualTo(5);
+    assertThat(countByStatus(ids.sessionId(), "CONFIRMED")).as("정원까지만 확정").isEqualTo(10);
+    assertThat(confirmedCount(ids.sessionId())).as("confirmed_count").isEqualTo(10);
+    // 대기 5 + 신규 30 - 승급 5 = 30
+    assertThat(countByStatus(ids.sessionId(), "WAITING")).isEqualTo(30);
+    Integer duplicatedKeys =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM (SELECT waiting_order FROM enrollment WHERE session_id = ?"
+                + " AND status = 'WAITING' GROUP BY waiting_order HAVING COUNT(*) > 1) d",
+            Integer.class,
+            ids.sessionId());
+    assertThat(duplicatedKeys).as("중복된 대기 키").isZero();
+  }
+
+  @Test
+  @DisplayName("같은 확정 신청을 10개 스레드가 동시에 취소하면 1건만 성공하고 승급도 정확히 1건이다 (NFR-01, D-52)")
+  void sameEnrollmentCancelledConcurrently() throws Exception {
+    String prefix = uniquePrefix();
+    SessionIds ids = createSession(3, prefix);
+    Long target = enrollmentService.enroll(ids.sessionId(), prefix + "-P0").id();
+    fillConfirmedFrom(ids.sessionId(), prefix, 1, 2);
+    for (int i = 0; i < 3; i++) {
+      enrollmentService.enroll(ids.sessionId(), prefix + "-W" + i);
+    }
+
+    List<Callable<Object>> tasks = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      tasks.add(() -> enrollmentCancelService.cancel(target, prefix + "-P0"));
+    }
+    List<Outcome> outcomes = runConcurrently(tasks);
+
+    assertThat(outcomes.stream().filter(o -> o.error() == null).count()).as("성공 건수").isEqualTo(1);
+    assertThat(errorsByType(outcomes))
+        .isEqualTo(Map.of(EnrollmentNotCancellableException.class.getName(), 9));
+    assertThat(countByStatus(ids.sessionId(), "CANCELLED")).isEqualTo(1);
+    assertThat(countByStatus(ids.sessionId(), "CONFIRMED")).as("승급 1건으로 원래 수 유지").isEqualTo(3);
+    assertThat(confirmedCount(ids.sessionId())).isEqualTo(3);
+    assertThat(countByStatus(ids.sessionId(), "WAITING")).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("대기자 취소와 확정자 취소가 섞여도 confirmed_count·CONFIRMED 수·대기 키가 맞다 (NFR-01, D-01, D-52)")
+  void mixedWaitingAndConfirmedCancel() throws Exception {
+    String prefix = uniquePrefix();
+    SessionIds ids = createSession(5, prefix);
+    List<Long> confirmedIds = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      confirmedIds.add(enrollmentService.enroll(ids.sessionId(), prefix + "-P" + i).id());
+    }
+    List<Long> waitingIds = new ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      waitingIds.add(enrollmentService.enroll(ids.sessionId(), prefix + "-W" + i).id());
+    }
+
+    List<Callable<Object>> tasks = new ArrayList<>();
+    // 확정 3건 취소 + 대기 3건 취소 (W0은 승급 대상이라 취소와 경합할 수 있다)
+    for (int i = 0; i < 3; i++) {
+      Long id = confirmedIds.get(i);
+      String emp = prefix + "-P" + i;
+      tasks.add(() -> enrollmentCancelService.cancel(id, emp));
+    }
+    for (int i = 0; i < 6; i += 2) {
+      Long id = waitingIds.get(i);
+      String emp = prefix + "-W" + i;
+      tasks.add(() -> enrollmentCancelService.cancel(id, emp));
+    }
+    List<Outcome> outcomes = runConcurrently(tasks);
+
+    // 승급된 대기자를 취소하려는 경우는 확정 취소가 되어 성공하고, 순서에 따라 결과가 달라진다.
+    // 불변식만 확인한다: 예외 없음, 정원 유지, 카운트·행 수 일치, 대기 키 유일
+    assertThat(errorsByType(outcomes)).as("예외 타입별 건수").isEmpty();
+    Integer confirmedRows = countByStatus(ids.sessionId(), "CONFIRMED");
+    assertThat(confirmedCount(ids.sessionId())).isEqualTo(confirmedRows);
+    assertThat(confirmedRows).as("대기자가 충분하므로 정원 유지").isEqualTo(5);
+    assertThat(countByStatus(ids.sessionId(), "CANCELLED")).isEqualTo(6);
+    assertThat(countByStatus(ids.sessionId(), "WAITING")).isEqualTo(0);
+    Integer duplicatedKeys =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM (SELECT waiting_order FROM enrollment WHERE session_id = ?"
+                + " AND status = 'WAITING' GROUP BY waiting_order HAVING COUNT(*) > 1) d",
+            Integer.class,
+            ids.sessionId());
+    assertThat(duplicatedKeys).as("중복된 대기 키").isZero();
+  }
+
+  /** P{from}~P{from+count-1} 사번으로 순차 확정 신청한다. */
+  private void fillConfirmedFrom(Long sessionId, String prefix, int from, int count) {
+    for (int i = from; i < from + count; i++) {
+      assertThat(enrollmentService.enroll(sessionId, prefix + "-P" + i).status())
+          .isEqualTo(EnrollmentStatus.CONFIRMED);
+    }
   }
 
   // ---- 준비 ----

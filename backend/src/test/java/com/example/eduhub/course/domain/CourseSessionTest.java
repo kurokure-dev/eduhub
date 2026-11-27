@@ -29,6 +29,19 @@ class CourseSessionTest {
   }
 
   @Test
+  @DisplayName("E1b releaseSeat는 확정 인원을 줄이고, 0이면 예외다 (D-52)")
+  void releaseSeat() {
+    CourseSession session = session(2);
+    session.occupySeat();
+
+    session.releaseSeat();
+
+    assertThat(session.getConfirmedCount()).isZero();
+    assertThatThrownBy(session::releaseSeat).isInstanceOf(CourseStateException.class);
+    assertThat(session.getConfirmedCount()).isZero();
+  }
+
+  @Test
   @DisplayName("E2 마감된 회차는 occupySeat가 예외다 (D-11)")
   void occupySeatClosed() {
     CourseSession session = session(2);

@@ -22,7 +22,7 @@ import {
   Typography,
 } from '@mui/material';
 import { type FormEvent, useEffect, useState } from 'react';
-import { Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCategories } from '../hooks/useCategories';
 import { useCourses } from '../hooks/useCourses';
 
@@ -61,6 +61,7 @@ function toParams({ keyword, category, page, size }: ListQuery): URLSearchParams
 /** 과정 목록 (FR-01). 서버 데이터는 훅으로만 가져오고, 검색 상태는 URL 쿼리에 둔다 (D-25) */
 export default function CourseListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const query = readQuery(searchParams);
   const { keyword, category, page, size } = query;
   const [keywordInput, setKeywordInput] = useState(keyword);
@@ -155,10 +156,26 @@ export default function CourseListPage() {
                   </TableRow>
                 ) : (
                   rows.map((course) => (
-                    <TableRow key={course.id}>
+                    // D-51: 행 전체를 눌러 상세로 간다
+                    <TableRow
+                      key={course.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={(event) => {
+                        // 새 탭 열기 같은 보조 클릭이나 텍스트 선택 중에는 이동하지 않는다 (D-51)
+                        if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+                        if (window.getSelection()?.toString()) return;
+                        navigate(`/courses/${course.id}`);
+                      }}
+                    >
                       <TableCell>
-                        {/* 제목을 상세 링크로 둔다 (D-26) */}
-                        <Link component={RouterLink} to={`/courses/${course.id}`} underline="hover">
+                        {/* 제목 링크는 유지하되 행 클릭과 겹쳐 이동하지 않게 전파를 막는다 (D-51) */}
+                        <Link
+                          component={RouterLink}
+                          to={`/courses/${course.id}`}
+                          underline="hover"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {course.title}
                         </Link>
                       </TableCell>

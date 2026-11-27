@@ -72,6 +72,24 @@ public class Enrollment {
     this.status = EnrollmentStatus.COMPLETED;
   }
 
+  /** 확정·대기 신청을 취소한다 (D-52). 그 밖의 상태면 예외다. 대기 키는 비운다 (D-46). */
+  public void cancel() {
+    if (status != EnrollmentStatus.CONFIRMED && status != EnrollmentStatus.WAITING) {
+      throw new IllegalStateException("확정 또는 대기 상태만 취소할 수 있습니다: " + status);
+    }
+    this.status = EnrollmentStatus.CANCELLED;
+    this.waitingOrder = null;
+  }
+
+  /** 대기 신청을 확정으로 올린다 (D-01, D-52). 대기가 아니면 예외다. 대기 키는 비운다 (D-46). */
+  public void promote() {
+    if (status != EnrollmentStatus.WAITING) {
+      throw new IllegalStateException("대기 상태만 확정으로 승급할 수 있습니다: " + status);
+    }
+    this.status = EnrollmentStatus.CONFIRMED;
+    this.waitingOrder = null;
+  }
+
   public Long getId() {
     return id;
   }

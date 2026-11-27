@@ -110,6 +110,34 @@ class EnrollmentServiceTest {
   }
 
   @Test
+  void s2c_대기_응답의_waitingRank는_회차_대기_수_D52() {
+    CourseSession s = session(1);
+    s.occupySeat();
+    stubNoDuplicate();
+    stubSave();
+    when(enrollmentRepository.findMaxWaitingOrder(SESSION_ID)).thenReturn(Optional.of(5L));
+    when(enrollmentRepository.countBySessionIdAndStatus(SESSION_ID, EnrollmentStatus.WAITING))
+        .thenReturn(3L);
+
+    EnrollmentResponse r = service.enroll(SESSION_ID, "E1");
+
+    assertThat(r.waitingRank()).isEqualTo(3L);
+  }
+
+  @Test
+  void s2d_확정_응답의_waitingRank는_null_D52() {
+    session(2);
+    stubNoDuplicate();
+    stubWaiting(false);
+    stubSave();
+
+    EnrollmentResponse r = service.enroll(SESSION_ID, "E1");
+
+    assertThat(r.waitingRank()).isNull();
+    verify(enrollmentRepository, never()).countBySessionIdAndStatus(any(), any());
+  }
+
+  @Test
   void s2b_대기_키는_회차_최대값_다음_번호() {
     CourseSession s = session(1);
     s.occupySeat();
