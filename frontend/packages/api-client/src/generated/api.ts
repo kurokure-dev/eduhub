@@ -135,6 +135,10 @@ export interface EnrollmentResponse {
     'sessionId'?: number;
     'employeeId'?: string;
     'status'?: EnrollmentResponseStatusEnum;
+    /**
+     * 대기 순번. 상태가 WAITING일 때만 값이 있다 (D-52)
+     */
+    'waitingRank'?: number | null;
     'appliedAt'?: string;
 }
 
@@ -1821,6 +1825,44 @@ export class CourseApi extends BaseAPI {
 export const EnrollmentApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * @summary 내 신청 취소
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        cancel: async (enrollmentId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'enrollmentId' is not null or undefined
+            assertParamExists('cancel', 'enrollmentId', enrollmentId)
+            const localVarPath = `/api/me/enrollments/{enrollmentId}/cancel`
+                .replace('{enrollmentId}', encodeURIComponent(String(enrollmentId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {number} sessionId 
@@ -1907,6 +1949,19 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = EnrollmentApiAxiosParamCreator(configuration)
     return {
         /**
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * @summary 내 신청 취소
+         * @param {number} enrollmentId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async cancel(enrollmentId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EnrollmentResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.cancel(enrollmentId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnrollmentApi.cancel']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {number} sessionId 
@@ -1942,6 +1997,16 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
     const localVarFp = EnrollmentApiFp(configuration)
     return {
         /**
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * @summary 내 신청 취소
+         * @param {EnrollmentApiCancelRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        cancel(requestParameters: EnrollmentApiCancelRequest, options?: RawAxiosRequestConfig): AxiosPromise<EnrollmentResponse> {
+            return localVarFp.cancel(requestParameters.enrollmentId, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
          * @summary 수강 신청
          * @param {EnrollmentApiEnrollRequest} requestParameters Request parameters.
@@ -1965,6 +2030,13 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
 };
 
 /**
+ * Request parameters for cancel operation in EnrollmentApi.
+ */
+export interface EnrollmentApiCancelRequest {
+    readonly enrollmentId: number
+}
+
+/**
  * Request parameters for enroll operation in EnrollmentApi.
  */
 export interface EnrollmentApiEnrollRequest {
@@ -1985,6 +2057,17 @@ export interface EnrollmentApiFindMineRequest {
  * EnrollmentApi - object-oriented interface
  */
 export class EnrollmentApi extends BaseAPI {
+    /**
+     * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+     * @summary 내 신청 취소
+     * @param {EnrollmentApiCancelRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public cancel(requestParameters: EnrollmentApiCancelRequest, options?: RawAxiosRequestConfig) {
+        return EnrollmentApiFp(this.configuration).cancel(requestParameters.enrollmentId, options).then((request) => request(this.axios, this.basePath));
+    }
+
     /**
      * 회차에 신청한다. 자리가 있고 대기자가 없으면 확정(CONFIRMED), 아니면 대기(WAITING)로 등록된다 (D-35). 신청자는 요청 본문이 아니라 로그인 토큰의 사번으로 정해진다 (D-44). 같은 회차에 확정·대기 신청이 이미 있으면 거절하지만, 취소 후 재신청은 된다 (D-07). 마감된 회차는 신청할 수 없다.
      * @summary 수강 신청
