@@ -11,11 +11,13 @@ import { useCategories } from './hooks/useCategories';
 import { useCourseDetail } from './hooks/useCourseDetail';
 import { useCourses } from './hooks/useCourses';
 import { useMyEnrollments } from './hooks/useMyEnrollments';
+import { useRoster } from './hooks/useRoster';
 
 vi.mock('./hooks/useCourses');
 vi.mock('./hooks/useCategories');
 vi.mock('./hooks/useCourseDetail');
 vi.mock('./hooks/useMyEnrollments');
+vi.mock('./hooks/useRoster');
 vi.mock('./api/clients', () => ({ authApi: { me: vi.fn(), login: vi.fn() } }));
 
 function renderApp(path: string) {
@@ -147,6 +149,27 @@ describe('App 라우팅 (D-24)', () => {
       renderApp('/admin/courses/new');
 
       expect(await screen.findByText('권한이 없습니다.')).toBeInTheDocument();
+    });
+
+    it('ADMIN은 /admin/courses/new에서 과정 등록 화면을 본다', async () => {
+      loginAs('ADMIN');
+      renderApp('/admin/courses/new');
+
+      expect(await screen.findByRole('heading', { name: '과정 등록' })).toBeInTheDocument();
+    });
+
+    it('ADMIN은 /admin/sessions/:id/roster에서 명단 화면을 본다', async () => {
+      loginAs('ADMIN');
+      vi.mocked(useRoster).mockReturnValue({
+        data: { sessionId: 7, courseTitle: '명단 과정', confirmed: [], waiting: [] },
+        loading: false,
+        error: undefined,
+        notFound: false,
+        reload: vi.fn(),
+      });
+      renderApp('/admin/sessions/7/roster');
+
+      expect(await screen.findByRole('heading', { name: '명단 과정' })).toBeInTheDocument();
     });
 
     it('로그인한 사용자는 /my/enrollments에서 내 신청 내역을 본다', async () => {
