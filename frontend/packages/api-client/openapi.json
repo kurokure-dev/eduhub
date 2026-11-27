@@ -18,6 +18,10 @@
   ],
   "tags": [
     {
+      "name": "Admin Enrollment",
+      "description": "관리자 회차 명단·수료"
+    },
+    {
       "name": "Enrollment",
       "description": "회차 수강 신청"
     },
@@ -346,7 +350,100 @@
             }
           },
           "409": {
-            "description": "마감된 회차이거나 이미 신청함",
+            "description": "마감된 회차이거나 이미 신청함 (수료한 회차 포함, D-49)",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/sessions/{sessionId}/completions": {
+      "post": {
+        "tags": [
+          "Admin Enrollment"
+        ],
+        "summary": "수료 처리",
+        "description": "사번 목록의 확정자를 수료로 바꾼다. 회차 시작일 당일부터 할 수 있고, 그 전이면 409다 (D-47). 사번마다 판정해 부분 성공을 허용하며, 실패한 사번은 사유 코드(WAITING, NOT_ENROLLED, ALREADY_COMPLETED)와 함께 돌려준다. 사번은 trim 후 대소문자를 무시해 비교하고 중복은 처음 것만 처리한다 (D-48).",
+        "operationId": "complete",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "처리됨 (부분 성공 포함)",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 오류 (본문 없음, 빈 목록, 201개 이상, 빈 사번, 20자 초과 사번)",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "회차 시작일 전",
             "content": {
               "*/*": {
                 "schema": {
@@ -1001,6 +1098,69 @@
         "security": []
       }
     },
+    "/api/v1/admin/sessions/{sessionId}/roster": {
+      "get": {
+        "tags": [
+          "Admin Enrollment"
+        ],
+        "summary": "회차 명단 조회",
+        "description": "회차 요약, 확정·수료자(신청순), 대기자(순번순)를 돌려준다. 취소는 넣지 않고, 계정이 없는 사번은 뺀다 (D-48).",
+        "operationId": "getRoster",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RosterResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "없는 회차",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me": {
       "get": {
         "tags": [
@@ -1258,7 +1418,7 @@
           "startDate": {
             "type": "string",
             "format": "date",
-            "description": "일정 (표시용, D-02)",
+            "description": "일정. 수료 가능 시점 판단에 쓴다 (D-47)",
             "example": "2026-12-01"
           },
           "place": {
@@ -1308,6 +1468,66 @@
           "appliedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CompletionRequest": {
+        "type": "object",
+        "properties": {
+          "employeeIds": {
+            "type": "array",
+            "description": "수료 처리할 사번 목록 (1~200개, 사번은 최대 20자, 중복은 처음 것만 처리)",
+            "example": [
+              "E001",
+              "E002"
+            ],
+            "items": {
+              "type": "string",
+              "maxLength": 20,
+              "minLength": 0
+            },
+            "maxItems": 200,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "employeeIds"
+        ]
+      },
+      "CompletionFailure": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "사번"
+          },
+          "reason": {
+            "type": "string",
+            "description": "실패 사유 코드",
+            "enum": [
+              "WAITING",
+              "NOT_ENROLLED",
+              "ALREADY_COMPLETED"
+            ]
+          }
+        }
+      },
+      "CompletionResponse": {
+        "type": "object",
+        "properties": {
+          "completed": {
+            "type": "array",
+            "description": "수료 처리된 사번",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed": {
+            "type": "array",
+            "description": "수료 처리에 실패한 사번과 사유",
+            "items": {
+              "$ref": "#/components/schemas/CompletionFailure"
+            }
           }
         }
       },
@@ -1470,6 +1690,113 @@
           }
         }
       },
+      "RosterConfirmedEntry": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "신청 ID"
+          },
+          "employeeNo": {
+            "type": "string",
+            "description": "사번"
+          },
+          "name": {
+            "type": "string",
+            "description": "이름"
+          },
+          "status": {
+            "type": "string",
+            "description": "신청 상태 (CONFIRMED 또는 COMPLETED)",
+            "enum": [
+              "CONFIRMED",
+              "WAITING",
+              "CANCELLED",
+              "COMPLETED"
+            ]
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "신청 일시"
+          }
+        }
+      },
+      "RosterResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "회차 ID"
+          },
+          "courseTitle": {
+            "type": "string",
+            "description": "과정 제목"
+          },
+          "sessionStartDate": {
+            "type": "string",
+            "format": "date",
+            "description": "회차 시작일"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "description": "정원"
+          },
+          "sessionStatus": {
+            "type": "string",
+            "description": "회차 상태",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          },
+          "confirmed": {
+            "type": "array",
+            "description": "확정·수료자 (신청순)",
+            "items": {
+              "$ref": "#/components/schemas/RosterConfirmedEntry"
+            }
+          },
+          "waiting": {
+            "type": "array",
+            "description": "대기자 (순번순)",
+            "items": {
+              "$ref": "#/components/schemas/RosterWaitingEntry"
+            }
+          }
+        }
+      },
+      "RosterWaitingEntry": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "신청 ID"
+          },
+          "employeeNo": {
+            "type": "string",
+            "description": "사번"
+          },
+          "name": {
+            "type": "string",
+            "description": "이름"
+          },
+          "waitingRank": {
+            "type": "integer",
+            "format": "int64",
+            "description": "현재 대기 순번(1부터, D-39)"
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "신청 일시"
+          }
+        }
+      },
       "AdminCourseSummaryResponse": {
         "type": "object",
         "properties": {
@@ -1535,7 +1862,7 @@
           "sessionStartDate": {
             "type": "string",
             "format": "date",
-            "description": "회차 시작일 (표시용, D-02)"
+            "description": "회차 시작일 (수료 가능 시점 기준, D-47)"
           },
           "sessionPlace": {
             "type": "string",

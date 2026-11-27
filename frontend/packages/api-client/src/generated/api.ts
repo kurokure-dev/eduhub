@@ -69,6 +69,41 @@ export const AdminSessionResponseStatusEnum = {
 
 export type AdminSessionResponseStatusEnum = typeof AdminSessionResponseStatusEnum[keyof typeof AdminSessionResponseStatusEnum];
 
+export interface CompletionFailure {
+    /**
+     * 사번
+     */
+    'employeeId'?: string;
+    /**
+     * 실패 사유 코드
+     */
+    'reason'?: CompletionFailureReasonEnum;
+}
+
+export const CompletionFailureReasonEnum = {
+    Waiting: 'WAITING',
+    NotEnrolled: 'NOT_ENROLLED',
+    AlreadyCompleted: 'ALREADY_COMPLETED',
+} as const;
+
+export type CompletionFailureReasonEnum = typeof CompletionFailureReasonEnum[keyof typeof CompletionFailureReasonEnum];
+
+export interface CompletionRequest {
+    /**
+     * 수료 처리할 사번 목록 (1~200개, 사번은 최대 20자, 중복은 처음 것만 처리)
+     */
+    'employeeIds': Array<string>;
+}
+export interface CompletionResponse {
+    /**
+     * 수료 처리된 사번
+     */
+    'completed'?: Array<string>;
+    /**
+     * 수료 처리에 실패한 사번과 사유
+     */
+    'failed'?: Array<CompletionFailure>;
+}
 export interface CourseDetailResponse {
     'id'?: number;
     'title'?: string;
@@ -157,7 +192,7 @@ export interface MyEnrollmentResponse {
      */
     'courseTitle'?: string;
     /**
-     * 회차 시작일 (표시용, D-02)
+     * 회차 시작일 (수료 가능 시점 기준, D-47)
      */
     'sessionStartDate'?: string;
     /**
@@ -207,9 +242,101 @@ export interface ProblemDetail {
     'instance'?: string | null;
     'properties'?: { [key: string]: any | null; } | null;
 }
+export interface RosterConfirmedEntry {
+    /**
+     * 신청 ID
+     */
+    'enrollmentId'?: number;
+    /**
+     * 사번
+     */
+    'employeeNo'?: string;
+    /**
+     * 이름
+     */
+    'name'?: string;
+    /**
+     * 신청 상태 (CONFIRMED 또는 COMPLETED)
+     */
+    'status'?: RosterConfirmedEntryStatusEnum;
+    /**
+     * 신청 일시
+     */
+    'appliedAt'?: string;
+}
+
+export const RosterConfirmedEntryStatusEnum = {
+    Confirmed: 'CONFIRMED',
+    Waiting: 'WAITING',
+    Cancelled: 'CANCELLED',
+    Completed: 'COMPLETED',
+} as const;
+
+export type RosterConfirmedEntryStatusEnum = typeof RosterConfirmedEntryStatusEnum[keyof typeof RosterConfirmedEntryStatusEnum];
+
+export interface RosterResponse {
+    /**
+     * 회차 ID
+     */
+    'sessionId'?: number;
+    /**
+     * 과정 제목
+     */
+    'courseTitle'?: string;
+    /**
+     * 회차 시작일
+     */
+    'sessionStartDate'?: string;
+    /**
+     * 정원
+     */
+    'capacity'?: number;
+    /**
+     * 회차 상태
+     */
+    'sessionStatus'?: RosterResponseSessionStatusEnum;
+    /**
+     * 확정·수료자 (신청순)
+     */
+    'confirmed'?: Array<RosterConfirmedEntry>;
+    /**
+     * 대기자 (순번순)
+     */
+    'waiting'?: Array<RosterWaitingEntry>;
+}
+
+export const RosterResponseSessionStatusEnum = {
+    Open: 'OPEN',
+    Closed: 'CLOSED',
+} as const;
+
+export type RosterResponseSessionStatusEnum = typeof RosterResponseSessionStatusEnum[keyof typeof RosterResponseSessionStatusEnum];
+
+export interface RosterWaitingEntry {
+    /**
+     * 신청 ID
+     */
+    'enrollmentId'?: number;
+    /**
+     * 사번
+     */
+    'employeeNo'?: string;
+    /**
+     * 이름
+     */
+    'name'?: string;
+    /**
+     * 현재 대기 순번(1부터, D-39)
+     */
+    'waitingRank'?: number;
+    /**
+     * 신청 일시
+     */
+    'appliedAt'?: string;
+}
 export interface SessionRequest {
     /**
-     * 일정 (표시용, D-02)
+     * 일정. 수료 가능 시점 판단에 쓴다 (D-47)
      */
     'startDate': string;
     /**
@@ -1021,6 +1148,205 @@ export const SearchAdminCoursesStatusEnum = {
     Closed: 'CLOSED',
 } as const;
 export type SearchAdminCoursesStatusEnum = typeof SearchAdminCoursesStatusEnum[keyof typeof SearchAdminCoursesStatusEnum];
+
+
+/**
+ * AdminEnrollmentApi - axios parameter creator
+ */
+export const AdminEnrollmentApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 사번 목록의 확정자를 수료로 바꾼다. 회차 시작일 당일부터 할 수 있고, 그 전이면 409다 (D-47). 사번마다 판정해 부분 성공을 허용하며, 실패한 사번은 사유 코드(WAITING, NOT_ENROLLED, ALREADY_COMPLETED)와 함께 돌려준다. 사번은 trim 후 대소문자를 무시해 비교하고 중복은 처음 것만 처리한다 (D-48).
+         * @summary 수료 처리
+         * @param {number} sessionId 
+         * @param {CompletionRequest} completionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        complete: async (sessionId: number, completionRequest: CompletionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('complete', 'sessionId', sessionId)
+            // verify required parameter 'completionRequest' is not null or undefined
+            assertParamExists('complete', 'completionRequest', completionRequest)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/completions`
+                .replace('{sessionId}', encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(completionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 회차 요약, 확정·수료자(신청순), 대기자(순번순)를 돌려준다. 취소는 넣지 않고, 계정이 없는 사번은 뺀다 (D-48).
+         * @summary 회차 명단 조회
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getRoster: async (sessionId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'sessionId' is not null or undefined
+            assertParamExists('getRoster', 'sessionId', sessionId)
+            const localVarPath = `/api/v1/admin/sessions/{sessionId}/roster`
+                .replace('{sessionId}', encodeURIComponent(String(sessionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * AdminEnrollmentApi - functional programming interface
+ */
+export const AdminEnrollmentApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = AdminEnrollmentApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 사번 목록의 확정자를 수료로 바꾼다. 회차 시작일 당일부터 할 수 있고, 그 전이면 409다 (D-47). 사번마다 판정해 부분 성공을 허용하며, 실패한 사번은 사유 코드(WAITING, NOT_ENROLLED, ALREADY_COMPLETED)와 함께 돌려준다. 사번은 trim 후 대소문자를 무시해 비교하고 중복은 처음 것만 처리한다 (D-48).
+         * @summary 수료 처리
+         * @param {number} sessionId 
+         * @param {CompletionRequest} completionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async complete(sessionId: number, completionRequest: CompletionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompletionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.complete(sessionId, completionRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AdminEnrollmentApi.complete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 회차 요약, 확정·수료자(신청순), 대기자(순번순)를 돌려준다. 취소는 넣지 않고, 계정이 없는 사번은 뺀다 (D-48).
+         * @summary 회차 명단 조회
+         * @param {number} sessionId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getRoster(sessionId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RosterResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getRoster(sessionId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AdminEnrollmentApi.getRoster']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * AdminEnrollmentApi - factory interface
+ */
+export const AdminEnrollmentApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = AdminEnrollmentApiFp(configuration)
+    return {
+        /**
+         * 사번 목록의 확정자를 수료로 바꾼다. 회차 시작일 당일부터 할 수 있고, 그 전이면 409다 (D-47). 사번마다 판정해 부분 성공을 허용하며, 실패한 사번은 사유 코드(WAITING, NOT_ENROLLED, ALREADY_COMPLETED)와 함께 돌려준다. 사번은 trim 후 대소문자를 무시해 비교하고 중복은 처음 것만 처리한다 (D-48).
+         * @summary 수료 처리
+         * @param {AdminEnrollmentApiCompleteRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        complete(requestParameters: AdminEnrollmentApiCompleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<CompletionResponse> {
+            return localVarFp.complete(requestParameters.sessionId, requestParameters.completionRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 회차 요약, 확정·수료자(신청순), 대기자(순번순)를 돌려준다. 취소는 넣지 않고, 계정이 없는 사번은 뺀다 (D-48).
+         * @summary 회차 명단 조회
+         * @param {AdminEnrollmentApiGetRosterRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getRoster(requestParameters: AdminEnrollmentApiGetRosterRequest, options?: RawAxiosRequestConfig): AxiosPromise<RosterResponse> {
+            return localVarFp.getRoster(requestParameters.sessionId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for complete operation in AdminEnrollmentApi.
+ */
+export interface AdminEnrollmentApiCompleteRequest {
+    readonly sessionId: number
+
+    readonly completionRequest: CompletionRequest
+}
+
+/**
+ * Request parameters for getRoster operation in AdminEnrollmentApi.
+ */
+export interface AdminEnrollmentApiGetRosterRequest {
+    readonly sessionId: number
+}
+
+/**
+ * AdminEnrollmentApi - object-oriented interface
+ */
+export class AdminEnrollmentApi extends BaseAPI {
+    /**
+     * 사번 목록의 확정자를 수료로 바꾼다. 회차 시작일 당일부터 할 수 있고, 그 전이면 409다 (D-47). 사번마다 판정해 부분 성공을 허용하며, 실패한 사번은 사유 코드(WAITING, NOT_ENROLLED, ALREADY_COMPLETED)와 함께 돌려준다. 사번은 trim 후 대소문자를 무시해 비교하고 중복은 처음 것만 처리한다 (D-48).
+     * @summary 수료 처리
+     * @param {AdminEnrollmentApiCompleteRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public complete(requestParameters: AdminEnrollmentApiCompleteRequest, options?: RawAxiosRequestConfig) {
+        return AdminEnrollmentApiFp(this.configuration).complete(requestParameters.sessionId, requestParameters.completionRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 회차 요약, 확정·수료자(신청순), 대기자(순번순)를 돌려준다. 취소는 넣지 않고, 계정이 없는 사번은 뺀다 (D-48).
+     * @summary 회차 명단 조회
+     * @param {AdminEnrollmentApiGetRosterRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getRoster(requestParameters: AdminEnrollmentApiGetRosterRequest, options?: RawAxiosRequestConfig) {
+        return AdminEnrollmentApiFp(this.configuration).getRoster(requestParameters.sessionId, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
 
 
 /**
