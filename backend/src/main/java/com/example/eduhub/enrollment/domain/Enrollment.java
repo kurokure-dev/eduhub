@@ -64,6 +64,14 @@ public class Enrollment {
     return enrollment;
   }
 
+  /** 확정 신청을 수료로 바꾼다 (D-03, D-48). 확정이 아니면 예외다. 확정 인원(D-37)은 유지한다. */
+  public void complete() {
+    if (status != EnrollmentStatus.CONFIRMED) {
+      throw new IllegalStateException("확정 상태만 수료 처리할 수 있습니다: " + status);
+    }
+    this.status = EnrollmentStatus.COMPLETED;
+  }
+
   public Long getId() {
     return id;
   }

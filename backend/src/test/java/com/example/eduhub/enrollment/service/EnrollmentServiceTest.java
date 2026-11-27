@@ -217,12 +217,31 @@ class EnrollmentServiceTest {
   }
 
   @Test
+  void s5b_수료한_회차는_재신청_불가_D49() {
+    session(2);
+    when(enrollmentRepository.existsBySessionIdAndEmployeeIdAndStatusIn(
+            SESSION_ID,
+            "E1",
+            List.of(
+                EnrollmentStatus.CONFIRMED, EnrollmentStatus.WAITING, EnrollmentStatus.COMPLETED)))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> service.enroll(SESSION_ID, "E1"))
+        .isInstanceOf(DuplicateEnrollmentException.class);
+    verify(enrollmentRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
   void s8_사번_앞뒤_공백은_제거() {
     session(2);
     when(enrollmentRepository.existsBySessionIdAndEmployeeIdAndStatusIn(
             eq(SESSION_ID),
             eq("E1"),
-            eq(List.of(EnrollmentStatus.CONFIRMED, EnrollmentStatus.WAITING))))
+            eq(
+                List.of(
+                    EnrollmentStatus.CONFIRMED,
+                    EnrollmentStatus.WAITING,
+                    EnrollmentStatus.COMPLETED))))
         .thenReturn(false);
     stubWaiting(false);
     stubSave();

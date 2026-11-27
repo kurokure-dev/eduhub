@@ -9,6 +9,7 @@ import java.time.LocalDate;
 
 /** 회차 등록·수정 요청 (FR-03). 정원은 1 이상이다 (course_session의 CHECK 제약과 같다). */
 public record SessionRequest(
-    @Schema(description = "일정 (표시용, D-02)", example = "2026-12-01") @NotNull LocalDate startDate,
+    @Schema(description = "일정. 수료 가능 시점 판단에 쓴다 (D-47)", example = "2026-12-01") @NotNull
+        LocalDate startDate,
     @Schema(description = "장소", example = "본사 3층 교육장") @NotBlank @Size(max = 200) String place,
     @Schema(description = "정원", example = "20") @NotNull @Min(1) Integer capacity) {}
