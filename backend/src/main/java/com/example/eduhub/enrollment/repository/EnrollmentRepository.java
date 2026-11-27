@@ -18,6 +18,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
   boolean existsBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
 
+  /** 회차의 지정한 사번들의 신청 전부 (취소 포함). 수료 처리용 (D-48). */
+  List<Enrollment> findBySessionIdAndEmployeeIdIn(Long sessionId, Collection<String> employeeIds);
+
   /** 회차의 대기 정렬 키 최대값 (D-46). 회차 행 락을 잡은 뒤에만 호출한다. */
   @Query("select max(e.waitingOrder) from Enrollment e where e.session.id = :sessionId")
   Optional<Long> findMaxWaitingOrder(@Param("sessionId") Long sessionId);
@@ -41,4 +44,27 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
       """)
   List<MyEnrollmentResponse> findMine(
       @Param("employeeNo") String employeeNo, @Param("status") @Nullable EnrollmentStatus status);
+
+  /** 명단 조회용 회차 요약 (FR-08). 없으면 비어 있다. */
+  @Query(
+      """
+      select new com.example.eduhub.enrollment.repository.RosterSessionSummary(
+        s.id, c.title, s.startDate, s.capacity, s.status)
+      from CourseSession s join s.course c
+      where s.id = :sessionId
+      """)
+  Optional<RosterSessionSummary> findRosterSummary(@Param("sessionId") Long sessionId);
+
+  /** 명단 조회용 신청 행 (FR-08, D-48). 계정이 없는 사번도 name null로 나온다. */
+  @Query(
+      """
+      select new com.example.eduhub.enrollment.repository.RosterRow(
+        e.id, e.employeeId, emp.name, e.status, e.waitingOrder, e.appliedAt)
+      from Enrollment e
+        left join Employee emp on emp.employeeNo = e.employeeId
+      where e.session.id = :sessionId and e.status in :statuses
+      order by e.appliedAt, e.id
+      """)
+  List<RosterRow> findRosterRows(
+      @Param("sessionId") Long sessionId, @Param("statuses") Collection<EnrollmentStatus> statuses);
 }

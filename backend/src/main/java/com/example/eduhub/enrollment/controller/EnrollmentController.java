@@ -49,7 +49,7 @@ public class EnrollmentController {
       content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   @ApiResponse(
       responseCode = "409",
-      description = "마감된 회차이거나 이미 신청함",
+      description = "마감된 회차이거나 이미 신청함 (수료한 회차 포함, D-49)",
       content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)

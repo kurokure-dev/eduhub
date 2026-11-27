@@ -30,7 +30,7 @@ public class CourseSession {
   @JoinColumn(name = "course_id", nullable = false)
   private Course course;
 
-  /** 표시용 일정 (FR-02). 취소·마감 판단에는 쓰지 않는다 (D-02). */
+  /** 일정 (FR-02). 수료 가능 시점 판단에 쓴다 (D-47). 취소·마감 판단에는 쓰지 않는다 (D-02). */
   @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 

@@ -44,8 +44,12 @@ public class EnrollmentService {
     if (!session.isOpen()) {
       throw new SessionClosedException(sessionId);
     }
+    // 수료(COMPLETED)한 회차에는 다시 신청할 수 없다 (D-49). 취소(CANCELLED) 후 재신청은 된다 (D-07)
     if (enrollmentRepository.existsBySessionIdAndEmployeeIdAndStatusIn(
-        sessionId, trimmed, List.of(EnrollmentStatus.CONFIRMED, EnrollmentStatus.WAITING))) {
+        sessionId,
+        trimmed,
+        List.of(
+            EnrollmentStatus.CONFIRMED, EnrollmentStatus.WAITING, EnrollmentStatus.COMPLETED))) {
       throw new DuplicateEnrollmentException(sessionId);
     }
 
