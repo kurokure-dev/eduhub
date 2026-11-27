@@ -41,7 +41,7 @@ course-mfe `src/api/http.ts`를 그대로 복사한다(같은 키 `eduhub.access
 | `login` | 저장 → 저장 확인(실패하면 되돌리고 오류) → user, `expired=false` | 같다 |
 | `logout` | 토큰 삭제 → `/courses` 이동 → 이동 반영 뒤 user=null | 토큰 삭제, `user=null`, `expired=false`를 바로 한다(이동이 없어 순서 문제가 없다) |
 | 401 이벤트 | user가 있거나 시작 확인 중이면 user=null, `expired=true`, `/login`으로 이동 | user=null, `expired=true`. 이동하지 않는다(비로그인이면 `RequireAdmin`이 로그인 화면을 보여 준다). 비로그인·확인 끝남이면 무시 |
-| `expired` 해제 | 로그인 성공, 로그아웃, `/login` 이탈 | 로그인 성공, 로그아웃 |
+| `expired` 해제 | 로그인 성공, 로그아웃, `/login` 이탈 | 로그인 성공, 로그아웃, 다른 탭 storage 동기화로 user가 정해질 때(토큰 삭제, 저장 user 채택, `me()` 성공) |
 | 다른 탭 storage 동기화 | 토큰 삭제면 비로그인, 다른 토큰이면 저장 user(사번이 토큰 클레임과 같을 때) 또는 `me()` | 같다(`tokenEmployeeNo` 함수 복사) |
 | ref 동기화 | `useLayoutEffect`로 user·initializing·navigate·location | `useLayoutEffect`로 user·initializing만 |
 | 늦은 응답 | 취소 플래그 + 토큰 비교 | 같다 |
@@ -50,8 +50,8 @@ course-mfe `src/api/http.ts`를 그대로 복사한다(같은 키 `eduhub.access
 
 **구성 (`main.tsx` → `App.tsx`)**
 - `main.tsx`: `StrictMode` → `ThemeProvider` → `CssBaseline` → `AuthProvider` → `App`
-- `App`: 상단 바 + `<RequireAdmin><AdminScreens /></RequireAdmin>`
-- `AdminScreens`: 지금 `App`의 목록/상세 상태 전환(`courseId`)을 그대로 옮긴 컴포넌트(`App.tsx` 안). 로그아웃·만료로 화면이 바뀌면 언마운트되므로, 다시 로그인하면 목록부터 시작한다(입력 중이던 대화상자 내용은 사라진다. 만료 60분 기준이라 받아들인다)
+- `App`: 상단 바 + `<RequireAdmin><AdminScreens key={user.id} /></RequireAdmin>`
+- `AdminScreens`: 지금 `App`의 목록/상세 상태 전환(`courseId`)을 그대로 옮긴 컴포넌트(`App.tsx` 안). 로그아웃·만료로 화면이 바뀌면 언마운트되므로, 다시 로그인하면 목록부터 시작한다(입력 중이던 대화상자 내용은 사라진다. 만료 60분 기준이라 받아들인다). 다른 탭 동기화로 사용자가 null을 거치지 않고 바뀌어도 `key={user.id}`로 다시 마운트되어 목록부터 시작한다
 
 **`RequireAdmin` (`src/auth/RequireAdmin.tsx`)**
 - `initializing`이면 로딩(`CircularProgress`)
@@ -114,4 +114,5 @@ course-mfe `src/api/http.ts`를 그대로 복사한다(같은 키 `eduhub.access
 - **토큰 저장(localStorage)**: course-mfe와 같은 위험과 대응(D-42 만료 60분, `dangerouslySetInnerHTML` 금지)
 - **두 벌의 코드**: course-mfe의 `http.ts`·인증 상태를 고치면 admin-mfe도 같이 고쳐야 한다. 두 파일 머리 주석에 서로를 가리키는 문장을 단다(admin-mfe 쪽만 이번에 추가하고, course-mfe는 바꾸지 않는다)
 - **같은 키 공유**: 같은 출처에 배포되면 한 앱의 로그아웃·만료가 다른 앱도 로그아웃시킨다(D-50). 다른 탭은 storage 이벤트로 맞춘다. 단 나중에 shell이 두 앱을 한 문서에 띄우면 같은 문서에는 storage 이벤트가 오지 않고, 이후 요청은 토큰 없이 가서 401이 나도 만료 처리되지 않는다. shell 통합 때 다룬다
+- **화면 역할과 서버 권한의 차이**: 화면의 ADMIN 판단은 `/api/me`(DB) 응답의 `role`이고, 서버의 ADMIN 검사는 토큰의 `role` 클레임이다(D-42, D-43). 역할이 바뀐 직후 최대 60분 동안 둘이 다를 수 있다. 승격된 사용자는 관리자 화면이 보여도 API가 403이고(오류 문장이 보인다), 강등된 사용자는 서버가 아직 허용해도 화면은 "권한이 없습니다."다. 다시 로그인하면 맞춰진다. 역할 변경은 드물어 받아들인다(D-50)
 - **이벤트 리스너**: 언마운트 때 해제하고, StrictMode에서 중복되지 않게 한다
