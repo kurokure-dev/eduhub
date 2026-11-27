@@ -1033,6 +1033,68 @@
         }
       }
     },
+    "/api/me/enrollments": {
+      "get": {
+        "tags": [
+          "Enrollment"
+        ],
+        "summary": "내 신청 내역 조회",
+        "description": "로그인한 사용자의 신청 내역을 최근 신청순으로 돌려준다. 대기(WAITING) 건에는 현재 대기 순번(waitingRank)이 붙는다 (D-09). 대상은 요청 값이 아니라 로그인 토큰의 사번으로 정해진다 (D-44).",
+        "operationId": "findMine",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "상태 (없으면 전체)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CONFIRMED",
+                "WAITING",
+                "CANCELLED",
+                "COMPLETED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "내 신청 내역 (없으면 빈 목록)",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyEnrollmentResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "status 값이 잘못됨",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "토큰이 없거나 유효하지 않음",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1450,6 +1512,57 @@
           "totalElements": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "MyEnrollmentResponse": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "신청 ID"
+          },
+          "sessionId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "회차 ID"
+          },
+          "courseTitle": {
+            "type": "string",
+            "description": "과정 제목"
+          },
+          "sessionStartDate": {
+            "type": "string",
+            "format": "date",
+            "description": "회차 시작일 (표시용, D-02)"
+          },
+          "sessionPlace": {
+            "type": "string",
+            "description": "회차 장소"
+          },
+          "status": {
+            "type": "string",
+            "description": "신청 상태",
+            "enum": [
+              "CONFIRMED",
+              "WAITING",
+              "CANCELLED",
+              "COMPLETED"
+            ]
+          },
+          "waitingRank": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "현재 대기 순번(1부터). WAITING일 때만 값이 있다 (D-09)"
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "신청 일시"
           }
         }
       },

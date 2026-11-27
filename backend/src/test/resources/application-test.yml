@@ -11,3 +11,12 @@ spring:
     hibernate:
       # Flyway가 만든 스키마와 엔티티가 어긋나면 테스트가 실패하도록 검사만 한다
       ddl-auto: validate
+    properties:
+      hibernate:
+        # NFR-02: FR-07 쿼리 개수 확인용
+        generate_statistics: true
+
+logging:
+  level:
+    # NFR-02: FR-07 쿼리 개수 확인용. 세션마다 찍히는 통계 로그는 끈다
+    org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: WARN

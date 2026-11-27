@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,9 +23,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -82,6 +86,10 @@ class EnrollmentServiceTest {
     assertThat(r.status()).isEqualTo(EnrollmentStatus.CONFIRMED);
     assertThat(r.sessionId()).isEqualTo(SESSION_ID);
     assertThat(s.getConfirmedCount()).isEqualTo(1);
+    ArgumentCaptor<Enrollment> captor = ArgumentCaptor.forClass(Enrollment.class);
+    verify(enrollmentRepository).saveAndFlush(captor.capture());
+    assertThat(captor.getValue().getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+    assertThat(captor.getValue().getWaitingOrder()).isNull();
   }
 
   @Test
@@ -90,15 +98,30 @@ class EnrollmentServiceTest {
     s.occupySeat();
     stubNoDuplicate();
     stubSave();
+    when(enrollmentRepository.findMaxWaitingOrder(SESSION_ID)).thenReturn(Optional.empty());
 
     EnrollmentResponse r = service.enroll(SESSION_ID, "E1");
 
     assertThat(r.status()).isEqualTo(EnrollmentStatus.WAITING);
     assertThat(s.getConfirmedCount()).isEqualTo(1);
-    org.mockito.ArgumentCaptor<Enrollment> captor =
-        org.mockito.ArgumentCaptor.forClass(Enrollment.class);
+    ArgumentCaptor<Enrollment> captor = ArgumentCaptor.forClass(Enrollment.class);
     verify(enrollmentRepository).saveAndFlush(captor.capture());
-    assertThat(captor.getValue().getWaitingOrder()).isNull();
+    assertThat(captor.getValue().getWaitingOrder()).isEqualTo(1L);
+  }
+
+  @Test
+  void s2b_대기_키는_회차_최대값_다음_번호() {
+    CourseSession s = session(1);
+    s.occupySeat();
+    stubNoDuplicate();
+    stubSave();
+    when(enrollmentRepository.findMaxWaitingOrder(SESSION_ID)).thenReturn(Optional.of(5L));
+
+    service.enroll(SESSION_ID, "E1");
+
+    ArgumentCaptor<Enrollment> captor = ArgumentCaptor.forClass(Enrollment.class);
+    verify(enrollmentRepository).saveAndFlush(captor.capture());
+    assertThat(captor.getValue().getWaitingOrder()).isEqualTo(6L);
   }
 
   @Test
@@ -107,11 +130,30 @@ class EnrollmentServiceTest {
     stubNoDuplicate();
     stubWaiting(true);
     stubSave();
+    when(enrollmentRepository.findMaxWaitingOrder(SESSION_ID)).thenReturn(Optional.of(2L));
 
     EnrollmentResponse r = service.enroll(SESSION_ID, "E1");
 
     assertThat(r.status()).isEqualTo(EnrollmentStatus.WAITING);
     assertThat(s.getConfirmedCount()).isZero();
+    ArgumentCaptor<Enrollment> captor = ArgumentCaptor.forClass(Enrollment.class);
+    verify(enrollmentRepository).saveAndFlush(captor.capture());
+    assertThat(captor.getValue().getWaitingOrder()).isEqualTo(3L);
+  }
+
+  @Test
+  void s3b_대기_키_조회는_회차_락_뒤에_일어난다() {
+    CourseSession s = session(1);
+    s.occupySeat();
+    stubNoDuplicate();
+    stubSave();
+    when(enrollmentRepository.findMaxWaitingOrder(SESSION_ID)).thenReturn(Optional.empty());
+
+    service.enroll(SESSION_ID, "E1");
+
+    InOrder order = inOrder(sessionLockService, enrollmentRepository);
+    order.verify(sessionLockService).lock(SESSION_ID);
+    order.verify(enrollmentRepository).findMaxWaitingOrder(SESSION_ID);
   }
 
   @Test
