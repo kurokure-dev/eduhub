@@ -133,15 +133,22 @@ export function useCourseDetail(id: string | undefined, options?: { admin?: bool
     };
   }, [courseId, fetchDetail, enabled]);
 
-  const refresh = useCallback(async () => {
-    if (courseId === undefined) return;
+  /** 다시 조회한다. 성공하면 true, 실패하면 false (화면이 재시도 실패를 알릴 수 있게) */
+  const refresh = useCallback(async (): Promise<boolean> => {
+    if (courseId === undefined) return false;
     const current = generation.current;
     const seq = ++refreshSeq.current;
     try {
       const view = await fetchDetail(courseId);
-      if (generation.current === current && refreshSeq.current === seq) setData(view);
+      if (generation.current === current && refreshSeq.current === seq) {
+        setData(view);
+        // 최초 조회가 실패한 화면의 "다시 시도"가 오류에서 벗어나도록 이전 오류를 지운다 (D-55)
+        setError(undefined);
+      }
+      return true;
     } catch {
       // 갱신 실패는 화면의 기존 데이터를 그대로 둔다
+      return false;
     }
   }, [courseId, fetchDetail]);
 

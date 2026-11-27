@@ -7,7 +7,8 @@ import RequireAuth from './auth/RequireAuth';
 import CourseDetailPage from './pages/CourseDetailPage';
 import MyEnrollmentsPage from './enrollment/MyEnrollmentsPage';
 import CourseListPage from './pages/CourseListPage';
-import PreparingPage from './pages/PreparingPage';
+import CourseFormPage from './pages/CourseFormPage';
+import RosterPage from './enrollment/RosterPage';
 
 // NFR-03: 상단 바. 로그인 상태에 따라 메뉴와 로그인·로그아웃이 달라진다
 function TopBar() {
@@ -74,7 +75,7 @@ export default function App() {
           path="/admin/courses/new"
           element={
             <RequireAuth admin>
-              <PreparingPage title="과정 등록" />
+              <CourseFormPage />
             </RequireAuth>
           }
         />
@@ -82,7 +83,7 @@ export default function App() {
           path="/admin/courses/:courseId/edit"
           element={
             <RequireAuth admin>
-              <PreparingPage title="과정 수정" />
+              <CourseFormPage />
             </RequireAuth>
           }
         />
@@ -90,7 +91,7 @@ export default function App() {
           path="/admin/sessions/:sessionId/roster"
           element={
             <RequireAuth admin>
-              <PreparingPage title="회차 명단" />
+              <RosterPage />
             </RequireAuth>
           }
         />

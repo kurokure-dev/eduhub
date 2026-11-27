@@ -214,7 +214,8 @@ describe('useCourseDetail', () => {
     unmount();
     resolveLate({ data: detail } as DetailResult);
 
-    await expect(pending).resolves.toBeUndefined();
+    // 조회 자체는 성공했으므로 true지만, 언마운트 뒤라 상태에는 반영하지 않는다
+    await expect(pending).resolves.toBe(true);
     expect(result.current.data?.sessions[0].remainingSeats).toBe(20);
   });
 
@@ -230,6 +231,20 @@ describe('useCourseDetail', () => {
 
     expect(result.current.data?.id).toBe(1);
     expect(result.current.error).toBeUndefined();
+  });
+
+  it('최초 조회가 실패한 뒤 refresh가 성공하면 오류를 지우고 데이터를 채운다 (D-55)', async () => {
+    getDetail.mockRejectedValueOnce(httpError(500));
+    const { result } = renderHook(() => useCourseDetail('1'));
+    await waitFor(() => expect(result.current.error).toBeDefined());
+
+    getDetail.mockResolvedValueOnce({ data: detail } as DetailResult);
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.data?.id).toBe(1);
   });
 
   it('enabled가 false면 조회하지 않고 로딩으로 두며, true가 되면 조회한다 (D-54)', async () => {
