@@ -7,6 +7,7 @@ import { authApi } from './api/clients';
 import { tokenStore } from './api/http';
 import { AuthProvider } from './auth/AuthContext';
 import App from './App';
+import { useAdminCourses } from './hooks/useAdminCourses';
 import { useCategories } from './hooks/useCategories';
 import { useCourseDetail } from './hooks/useCourseDetail';
 import { useCourses } from './hooks/useCourses';
@@ -14,6 +15,7 @@ import { useMyEnrollments } from './hooks/useMyEnrollments';
 import { useRoster } from './hooks/useRoster';
 
 vi.mock('./hooks/useCourses');
+vi.mock('./hooks/useAdminCourses');
 vi.mock('./hooks/useCategories');
 vi.mock('./hooks/useCourseDetail');
 vi.mock('./hooks/useMyEnrollments');
@@ -40,6 +42,12 @@ describe('App 라우팅 (D-24)', () => {
       data: { content: [{ id: 1, title: 'Spring 입문', category: '개발' }], page: 0, size: 10, totalElements: 1 },
       loading: false,
       error: undefined,
+    });
+    vi.mocked(useAdminCourses).mockReturnValue({
+      data: { content: [{ id: 5, title: '관리 과정', category: '개발', status: 'CLOSED' }], page: 0, size: 10, totalElements: 1 },
+      loading: false,
+      error: undefined,
+      reload: vi.fn(),
     });
     vi.mocked(useMyEnrollments).mockReturnValue({ data: [], loading: false, error: undefined, reload: vi.fn() });
     vi.mocked(useCourseDetail).mockReturnValue({
@@ -98,11 +106,12 @@ describe('App 라우팅 (D-24)', () => {
       expect(screen.queryByText('과정 등록')).not.toBeInTheDocument();
     });
 
-    it('ADMIN 상단 바에는 과정 등록과 이름, 로그아웃이 있다', async () => {
+    it('ADMIN 상단 바에는 과정 관리와 이름, 로그아웃이 있고 과정 등록 링크는 없다', async () => {
       loginAs('ADMIN');
       renderApp('/courses');
 
-      expect(await screen.findByRole('link', { name: '과정 등록' })).toBeInTheDocument();
+      expect(await screen.findByRole('link', { name: '과정 관리' })).toHaveAttribute('href', '/admin/courses');
+      expect(screen.queryByRole('link', { name: '과정 등록' })).not.toBeInTheDocument();
       expect(screen.getByText('홍길동')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
     });
@@ -149,6 +158,21 @@ describe('App 라우팅 (D-24)', () => {
       renderApp('/admin/courses/new');
 
       expect(await screen.findByText('권한이 없습니다.')).toBeInTheDocument();
+    });
+
+    it('EMPLOYEE가 /admin/courses에 가면 권한 없음이 보인다', async () => {
+      loginAs('EMPLOYEE');
+      renderApp('/admin/courses');
+
+      expect(await screen.findByText('권한이 없습니다.')).toBeInTheDocument();
+    });
+
+    it('ADMIN은 /admin/courses에서 과정 관리 목록을 본다', async () => {
+      loginAs('ADMIN');
+      renderApp('/admin/courses');
+
+      expect(await screen.findByRole('heading', { name: '과정 관리' })).toBeInTheDocument();
+      expect(screen.getByText('관리 과정')).toBeInTheDocument();
     });
 
     it('ADMIN은 /admin/courses/new에서 과정 등록 화면을 본다', async () => {
