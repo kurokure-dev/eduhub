@@ -44,6 +44,61 @@ class EnrollmentTest {
   }
 
   @Test
+  @DisplayName("cancel()은 CONFIRMED를 CANCELLED로 바꾼다 (D-51)")
+  void cancelConfirmed() {
+    Enrollment e = Enrollment.confirmed(null, "E001", T0);
+
+    e.cancel();
+
+    assertThat(e.getStatus()).isEqualTo(EnrollmentStatus.CANCELLED);
+    assertThat(e.getWaitingOrder()).isNull();
+  }
+
+  @Test
+  @DisplayName("cancel()은 WAITING을 CANCELLED로 바꾸고 대기 키를 비운다 (D-46, D-51)")
+  void cancelWaitingClearsOrder() {
+    Enrollment e = Enrollment.waiting(null, "E001", T0, 3L);
+
+    e.cancel();
+
+    assertThat(e.getStatus()).isEqualTo(EnrollmentStatus.CANCELLED);
+    assertThat(e.getWaitingOrder()).isNull();
+  }
+
+  @Test
+  @DisplayName("cancel()은 COMPLETED·CANCELLED이면 IllegalStateException이다 (D-51)")
+  void cancelNotAllowedStatuses() {
+    Enrollment completed = Enrollment.confirmed(null, "E001", T0);
+    completed.complete();
+    Enrollment cancelled = Enrollment.confirmed(null, "E002", T0);
+    cancelled.cancel();
+
+    assertThatThrownBy(completed::cancel).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(cancelled::cancel).isInstanceOf(IllegalStateException.class);
+    assertThat(completed.getStatus()).isEqualTo(EnrollmentStatus.COMPLETED);
+  }
+
+  @Test
+  @DisplayName("promote()는 WAITING을 CONFIRMED로 바꾸고 대기 키를 비운다 (D-01, D-46)")
+  void promoteWaiting() {
+    Enrollment e = Enrollment.waiting(null, "E001", T0, 3L);
+
+    e.promote();
+
+    assertThat(e.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+    assertThat(e.getWaitingOrder()).isNull();
+  }
+
+  @Test
+  @DisplayName("promote()는 대기가 아니면 IllegalStateException이다")
+  void promoteNonWaitingFails() {
+    Enrollment e = Enrollment.confirmed(null, "E001", T0);
+
+    assertThatThrownBy(e::promote).isInstanceOf(IllegalStateException.class);
+    assertThat(e.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+  }
+
+  @Test
   @DisplayName("complete()는 CANCELLED이면 IllegalStateException이다")
   void completeCancelledFails() {
     Enrollment e = Enrollment.confirmed(null, "E001", T0);

@@ -21,6 +21,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   /** 회차의 지정한 사번들의 신청 전부 (취소 포함). 수료 처리용 (D-48). */
   List<Enrollment> findBySessionIdAndEmployeeIdIn(Long sessionId, Collection<String> employeeIds);
 
+  /** 본인 신청의 회차 id만 읽는다. 락 전에 엔티티를 영속성 컨텍스트에 올리지 않기 위한 투영 쿼리다 (D-51, D-45). */
+  @Query("select e.session.id from Enrollment e where e.id = :id and e.employeeId = :employeeNo")
+  Optional<Long> findSessionIdByIdAndEmployeeId(
+      @Param("id") Long id, @Param("employeeNo") String employeeNo);
+
+  /** 승급 대상: 회차 대기 중 정렬 키가 가장 작은 신청 (D-01). 회차 행 락을 잡은 뒤에만 호출한다. */
+  Optional<Enrollment> findFirstBySessionIdAndStatusOrderByWaitingOrderAsc(
+      Long sessionId, EnrollmentStatus status);
+
+  long countBySessionIdAndStatus(Long sessionId, EnrollmentStatus status);
+
   /** 회차의 대기 정렬 키 최대값 (D-46). 회차 행 락을 잡은 뒤에만 호출한다. */
   @Query("select max(e.waitingOrder) from Enrollment e where e.session.id = :sessionId")
   Optional<Long> findMaxWaitingOrder(@Param("sessionId") Long sessionId);

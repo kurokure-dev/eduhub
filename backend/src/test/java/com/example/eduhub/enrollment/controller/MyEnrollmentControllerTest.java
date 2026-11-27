@@ -6,13 +6,20 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.eduhub.auth.config.SecurityConfig;
 import com.example.eduhub.enrollment.domain.EnrollmentStatus;
+import com.example.eduhub.enrollment.dto.EnrollmentResponse;
 import com.example.eduhub.enrollment.dto.MyEnrollmentResponse;
+import com.example.eduhub.enrollment.service.EnrollmentCancelService;
+import com.example.eduhub.enrollment.service.EnrollmentNotCancellableException;
+import com.example.eduhub.enrollment.service.EnrollmentNotFoundException;
 import com.example.eduhub.enrollment.service.MyEnrollmentQueryService;
+import com.example.eduhub.enrollment.service.SessionClosedException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -35,6 +43,7 @@ class MyEnrollmentControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private MyEnrollmentQueryService service;
+  @MockitoBean private EnrollmentCancelService cancelService;
   @MockitoBean private JwtDecoder jwtDecoder;
 
   private static JwtRequestPostProcessor token(String employeeNo) {
@@ -103,5 +112,51 @@ class MyEnrollmentControllerTest {
         .andExpect(status().isBadRequest());
 
     verify(service, never()).findMine(any(), any());
+  }
+
+  @Test
+  @DisplayName("C5 취소는 200이고 토큰의 사번으로 서비스를 부른다 (D-51)")
+  void cancelReturnsOk() throws Exception {
+    given(cancelService.cancel(7L, "E1"))
+        .willReturn(new EnrollmentResponse(7L, 3L, "E1", EnrollmentStatus.CANCELLED, null, NOW));
+
+    mockMvc
+        .perform(post(URL + "/7/cancel").with(token("E1")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(7))
+        .andExpect(jsonPath("$.status").value("CANCELLED"))
+        .andExpect(jsonPath("$.waitingRank").isEmpty());
+
+    verify(cancelService).cancel(7L, "E1");
+  }
+
+  @Test
+  @DisplayName("C6 취소에 토큰이 없으면 401이고 서비스를 부르지 않는다")
+  void cancelWithoutTokenIsUnauthorized() throws Exception {
+    mockMvc.perform(post(URL + "/7/cancel")).andExpect(status().isUnauthorized());
+
+    verify(cancelService, never()).cancel(any(), any());
+  }
+
+  @Test
+  @DisplayName("C7 남의·없는 신청은 404, 수료·취소·마감은 409이고 problem+json이다 (D-45, D-02)")
+  void cancelMapsErrors() throws Exception {
+    given(cancelService.cancel(7L, "E404")).willThrow(new EnrollmentNotFoundException(7L));
+    given(cancelService.cancel(7L, "E409A"))
+        .willThrow(new EnrollmentNotCancellableException(7L, EnrollmentStatus.COMPLETED));
+    given(cancelService.cancel(7L, "E409B")).willThrow(new SessionClosedException(3L));
+
+    mockMvc
+        .perform(post(URL + "/7/cancel").with(token("E404")))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    mockMvc
+        .perform(post(URL + "/7/cancel").with(token("E409A")))
+        .andExpect(status().isConflict())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    mockMvc
+        .perform(post(URL + "/7/cancel").with(token("E409B")))
+        .andExpect(status().isConflict())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
   }
 }
