@@ -5,6 +5,7 @@ import { useAuth } from './auth/AuthContext';
 import LoginPage from './auth/LoginPage';
 import RequireAuth from './auth/RequireAuth';
 import CourseDetailPage from './pages/CourseDetailPage';
+import MyEnrollmentsPage from './enrollment/MyEnrollmentsPage';
 import CourseListPage from './pages/CourseListPage';
 import PreparingPage from './pages/PreparingPage';
 
@@ -59,13 +60,13 @@ export default function App() {
       <TopBar />
       <Routes>
         <Route path="/courses" element={<CourseListPage />} />
-        <Route path="/courses/:id" element={<CourseDetailPage />} />
+        <Route path="/courses/:courseId" element={<CourseDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/my/enrollments"
           element={
             <RequireAuth>
-              <PreparingPage title="내 신청 내역" />
+              <MyEnrollmentsPage />
             </RequireAuth>
           }
         />
@@ -74,6 +75,22 @@ export default function App() {
           element={
             <RequireAuth admin>
               <PreparingPage title="과정 등록" />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/courses/:courseId/edit"
+          element={
+            <RequireAuth admin>
+              <PreparingPage title="과정 수정" />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/sessions/:sessionId/roster"
+          element={
+            <RequireAuth admin>
+              <PreparingPage title="회차 명단" />
             </RequireAuth>
           }
         />
