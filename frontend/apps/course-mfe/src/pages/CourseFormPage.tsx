@@ -28,7 +28,7 @@ import { useAuth } from '../auth/AuthContext';
 import { AdminActionError, useAdminCourseActions } from '../hooks/useAdminCourseActions';
 import { useCourseDetail } from '../hooks/useCourseDetail';
 
-// D-55: 입력 검증은 admin-mfe·백엔드와 같다
+// D-55: 입력 검증은 백엔드 검증과 같다
 const MAX_TITLE = 200;
 const MAX_CATEGORY = 50;
 const MAX_DESCRIPTION = 2000;
@@ -38,14 +38,16 @@ const MAX_PLACE = 200;
 type Notice = { severity: 'success' | 'error' | 'warning'; text: string; retry?: boolean };
 
 /** 서버 detail이 있으면 그대로, 없으면 종류별 일반 문구 (D-55) */
-function errorNotice(e: unknown, fallback: string): Notice {
+function errorNotice(e: unknown, fallback: string, notFoundText = '과정을 찾을 수 없습니다'): Notice {
   if (e instanceof AdminActionError) {
     if (e.detail) return { severity: 'error', text: e.detail };
     if (e.kind === 'forbidden') return { severity: 'error', text: '관리자만 볼 수 있습니다.' };
-    if (e.kind === 'notFound') return { severity: 'error', text: '과정을 찾을 수 없습니다' };
+    if (e.kind === 'notFound') return { severity: 'error', text: notFoundText };
   }
   return { severity: 'error', text: fallback };
 }
+
+type SessionRow = NonNullable<ReturnType<typeof useCourseDetail>['data']>['sessions'][number];
 
 /** 과정 등록·수정·종료와 회차 추가 (FR-03, D-55). courseId가 없으면 등록, 있으면 수정 */
 export default function CourseFormPage() {
@@ -57,7 +59,7 @@ export default function CourseFormPage() {
     admin: true,
     enabled: !initializing && editing,
   });
-  const { createCourse, updateCourse, closeCourse, createSession, pending } = useAdminCourseActions();
+  const { createCourse, updateCourse, closeCourse, createSession, updateSession, closeSession, pending } = useAdminCourseActions();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -71,6 +73,15 @@ export default function CourseFormPage() {
   const [capacity, setCapacity] = useState('');
   const [sessionNotice, setSessionNotice] = useState<Notice>();
   const [closeOpen, setCloseOpen] = useState(false);
+  // 회차 수정·마감 대화상자 대상 (FR-03, D-56)
+  const [editTarget, setEditTarget] = useState<SessionRow>();
+  const [editDate, setEditDate] = useState('');
+  const [editPlace, setEditPlace] = useState('');
+  const [editCapacity, setEditCapacity] = useState('');
+  const [editError, setEditError] = useState<string>();
+  const [closeTarget, setCloseTarget] = useState<SessionRow>();
+  // 마감 요청이 성공한 회차는 refresh 결과와 무관하게 바로 마감으로 표시한다
+  const [closedSessionIds, setClosedSessionIds] = useState<number[]>([]);
   // 오류 화면의 "다시 시도" 진행 중·실패 (누른 뒤 반응이 보이게 한다)
   const [retrying, setRetrying] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
@@ -100,6 +111,9 @@ export default function CourseFormPage() {
       setCapacity('');
       setCloseOpen(false);
       setClosedLocal(false);
+      setEditTarget(undefined);
+      setCloseTarget(undefined);
+      setClosedSessionIds([]);
       return;
     }
     if (data && data.id !== filledId) {
@@ -110,6 +124,9 @@ export default function CourseFormPage() {
       setNotice(undefined);
       setSessionNotice(undefined);
       setClosedLocal(false);
+      setEditTarget(undefined);
+      setCloseTarget(undefined);
+      setClosedSessionIds([]);
     }
   }, [editing, data, filledId]);
 
@@ -131,7 +148,15 @@ export default function CourseFormPage() {
     Number.isSafeInteger(capacityNumber) &&
     capacityNumber >= 1;
 
-  // 설명은 비면 보내지 않는다 (admin-mfe와 같다)
+  const editCapacityNumber = /^\d+$/.test(editCapacity) ? Number(editCapacity) : NaN;
+  const editValid =
+    editDate !== '' &&
+    editPlace.trim() !== '' &&
+    editPlace.length <= MAX_PLACE &&
+    Number.isSafeInteger(editCapacityNumber) &&
+    editCapacityNumber >= 1;
+
+  // 설명은 비면 보내지 않는다 (D-55)
   const request = () => ({ title: title.trim(), category: category.trim(), description: description.trim() || undefined });
 
   const handleCreate = async () => {
@@ -191,6 +216,57 @@ export default function CourseFormPage() {
     const refreshed = await refresh();
     if (succeeded && !refreshed) {
       setNotice({ severity: 'warning', text: '과정을 종료했지만 화면을 갱신하지 못했습니다', retry: true });
+    }
+  };
+
+  const openEdit = (s: SessionRow) => {
+    setEditTarget(s);
+    setEditDate(s.startDate);
+    setEditPlace(s.place);
+    setEditCapacity(String(s.capacity));
+    setEditError(undefined);
+  };
+
+  // 실패하면 서버 detail(예: D-38 확정자 있는 회차의 정원 변경 409)을 대화상자 안에 그대로 보여 준다
+  const handleUpdateSession = async () => {
+    if (!data || !editTarget) return;
+    setEditError(undefined);
+    setSessionNotice(undefined);
+    try {
+      await updateSession(data.id, editTarget.id, {
+        startDate: editDate,
+        place: editPlace.trim(),
+        capacity: editCapacityNumber,
+      });
+    } catch (e: unknown) {
+      setEditError(errorNotice(e, '회차를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.', '회차를 찾을 수 없습니다').text);
+      // 다른 관리자가 먼저 바꾼 상태를 반영한다. 대화상자와 서버 사유는 그대로 둔다 (D-56)
+      if (e instanceof AdminActionError && (e.kind === 'conflict' || e.kind === 'notFound')) await refresh();
+      return;
+    }
+    setEditTarget(undefined);
+    if (!(await refresh())) {
+      setSessionNotice({ severity: 'warning', text: '회차를 수정했지만 목록을 갱신하지 못했습니다', retry: true });
+    }
+  };
+
+  const handleCloseSession = async () => {
+    if (!data || !closeTarget) return;
+    const target = closeTarget;
+    setSessionNotice(undefined);
+    let succeeded = false;
+    try {
+      await closeSession(data.id, target.id);
+      succeeded = true;
+      setClosedSessionIds((ids) => [...ids, target.id]);
+    } catch (e: unknown) {
+      setSessionNotice(errorNotice(e, '회차를 마감하지 못했습니다. 잠시 후 다시 시도해 주세요.', '회차를 찾을 수 없습니다'));
+    }
+    setCloseTarget(undefined);
+    // 성공이든 실패든 서버 상태가 바뀌었을 수 있으니 다시 읽는다
+    const refreshed = await refresh();
+    if (succeeded && !refreshed) {
+      setSessionNotice({ severity: 'warning', text: '회차를 마감했지만 목록을 갱신하지 못했습니다', retry: true });
     }
   };
 
@@ -335,29 +411,57 @@ export default function CourseFormPage() {
                     <TableCell align="right">남은 자리/정원</TableCell>
                     <TableCell align="center">상태</TableCell>
                     <TableCell align="center">명단</TableCell>
+                    <TableCell align="center">관리</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.sessions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         회차가 없습니다.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    data.sessions.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.startDate}</TableCell>
-                        <TableCell>{s.place}</TableCell>
-                        <TableCell align="right">{`${s.remainingSeats} / ${s.capacity}`}</TableCell>
-                        <TableCell align="center">{s.closed ? '마감' : '모집 중'}</TableCell>
-                        <TableCell align="center">
-                          <Link component={RouterLink} to={`/admin/sessions/${s.id}/roster`} underline="hover">
-                            명단
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    data.sessions.map((s) => {
+                      const sessionClosed = s.closed || closedSessionIds.includes(s.id);
+                      return (
+                        <TableRow key={s.id}>
+                          <TableCell>{s.startDate}</TableCell>
+                          <TableCell>{s.place}</TableCell>
+                          <TableCell align="right">{`${s.remainingSeats} / ${s.capacity}`}</TableCell>
+                          <TableCell align="center">{sessionClosed ? '마감' : '모집 중'}</TableCell>
+                          <TableCell align="center">
+                            <Link component={RouterLink} to={`/admin/sessions/${s.id}/roster`} underline="hover">
+                              명단
+                            </Link>
+                          </TableCell>
+                          <TableCell align="center">
+                            {/* 종료된 과정이나 마감된 회차는 바꿀 수 없다 (D-32) */}
+                            {!closed && !sessionClosed && (
+                              <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
+                                <Button
+                                  size="small"
+                                  disabled={pending}
+                                  aria-label={`수정 ${s.startDate} 회차`}
+                                  onClick={() => openEdit(s)}
+                                >
+                                  수정
+                                </Button>
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  disabled={pending}
+                                  aria-label={`마감 ${s.startDate} 회차`}
+                                  onClick={() => setCloseTarget(s)}
+                                >
+                                  마감
+                                </Button>
+                              </Stack>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -402,6 +506,76 @@ export default function CourseFormPage() {
               회차 추가
             </Button>
           </Stack>
+
+          <Dialog
+            open={editTarget !== undefined}
+            onClose={() => !pending && setEditTarget(undefined)}
+            fullWidth
+            maxWidth="xs"
+          >
+            <DialogTitle>회차 수정</DialogTitle>
+            <DialogContent>
+              <Stack spacing={2} sx={{ pt: 1 }}>
+                {editError && <Alert severity="error">{editError}</Alert>}
+                <TextField
+                  label="시작일"
+                  type="date"
+                  required
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  disabled={pending}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                <TextField
+                  label="장소"
+                  required
+                  value={editPlace}
+                  onChange={(e) => setEditPlace(e.target.value)}
+                  disabled={pending}
+                  error={editPlace.length > MAX_PLACE}
+                  helperText={editPlace.length > MAX_PLACE ? `${MAX_PLACE}자 이하로 입력해 주세요` : undefined}
+                />
+                <TextField
+                  label="정원"
+                  type="number"
+                  required
+                  value={editCapacity}
+                  onChange={(e) => setEditCapacity(e.target.value)}
+                  disabled={pending}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                  error={editCapacity !== '' && !(editCapacityNumber >= 1)}
+                  helperText={
+                    editCapacity !== '' && !(editCapacityNumber >= 1) ? '1 이상의 정수를 입력해 주세요' : undefined
+                  }
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button disabled={pending} onClick={() => setEditTarget(undefined)}>
+                취소
+              </Button>
+              <Button variant="contained" disabled={pending || !editValid} onClick={handleUpdateSession}>
+                회차 저장
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={closeTarget !== undefined} onClose={() => !pending && setCloseTarget(undefined)}>
+            <DialogTitle>회차를 마감할까요?</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {closeTarget?.startDate} {closeTarget?.place} — 마감하면 이 회차에 더 이상 신청을 받지 않습니다. 마감한 회차는 수정하거나 다시 열 수 없습니다.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button disabled={pending} onClick={() => setCloseTarget(undefined)}>
+                닫기
+              </Button>
+              <Button color="error" disabled={pending} onClick={handleCloseSession}>
+                마감 확정
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           <Dialog open={closeOpen} onClose={() => !pending && setCloseOpen(false)}>
             <DialogTitle>과정을 종료할까요?</DialogTitle>

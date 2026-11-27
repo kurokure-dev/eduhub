@@ -62,5 +62,17 @@ export function useAdminCourseActions() {
     [run],
   );
 
-  return { createCourse, updateCourse, closeCourse, createSession, pending };
+  // 회차 수정·마감 (FR-03, D-56)
+  const updateSession = useCallback(
+    (id: number, sessionId: number, sessionRequest: SessionRequest): Promise<AdminSessionResponse> =>
+      run(() => adminCourseApi.updateSession({ id, sessionId, sessionRequest })),
+    [run],
+  );
+  const closeSession = useCallback(
+    (id: number, sessionId: number): Promise<AdminSessionResponse> =>
+      run(() => adminCourseApi.closeSession({ id, sessionId })),
+    [run],
+  );
+
+  return { createCourse, updateCourse, closeCourse, createSession, updateSession, closeSession, pending };
 }

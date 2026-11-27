@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,6 +19,8 @@ const actions = {
   updateCourse: vi.fn(),
   closeCourse: vi.fn(),
   createSession: vi.fn(),
+  updateSession: vi.fn(),
+  closeSession: vi.fn(),
   pending: false,
 };
 const refresh = vi.fn();
@@ -51,8 +53,13 @@ function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>;
 }
 
-function renderAt(path: string) {
-  return render(
+function GoOther() {
+  const navigate = useNavigate();
+  return <button onClick={() => navigate('/admin/courses/4/edit')}>다른 과정으로</button>;
+}
+
+function tree(path: string) {
+  return (
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/admin/courses/new" element={<CourseFormPage />} />
@@ -60,8 +67,13 @@ function renderAt(path: string) {
       </Routes>
       <Where />
       <GoNew />
-    </MemoryRouter>,
+      <GoOther />
+    </MemoryRouter>
   );
+}
+
+function renderAt(path: string) {
+  return render(tree(path));
 }
 
 describe('CourseFormPage', () => {
@@ -70,6 +82,8 @@ describe('CourseFormPage', () => {
     actions.updateCourse.mockReset();
     actions.closeCourse.mockReset();
     actions.createSession.mockReset();
+    actions.updateSession.mockReset();
+    actions.closeSession.mockReset();
     refresh.mockReset();
     refresh.mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({
@@ -261,5 +275,167 @@ describe('CourseFormPage', () => {
 
     expect(actions.closeCourse).toHaveBeenCalledWith(3);
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  describe('회차 수정·마감 (FR-03, D-56)', () => {
+    it('수정 Dialog는 현재 값으로 채우고 저장하면 updateSession 뒤 refresh한다', async () => {
+      actions.updateSession.mockResolvedValue({});
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      const dialog = await screen.findByRole('dialog', { name: '회차 수정' });
+      expect(within(dialog).getByLabelText(/시작일/)).toHaveValue('2026-03-01');
+      expect(within(dialog).getByLabelText(/장소/)).toHaveValue('본관');
+      expect(within(dialog).getByLabelText(/정원/)).toHaveValue(10);
+
+      fireEvent.change(within(dialog).getByLabelText(/장소/), { target: { value: '별관' } });
+      fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '0' } });
+      expect(within(dialog).getByRole('button', { name: '회차 저장' })).toBeDisabled();
+      fireEvent.change(within(dialog).getByLabelText(/정원/), { target: { value: '20' } });
+      await userEvent.click(within(dialog).getByRole('button', { name: '회차 저장' }));
+
+      expect(actions.updateSession).toHaveBeenCalledWith(3, 9, { startDate: '2026-03-01', place: '별관', capacity: 20 });
+      await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
+      await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: '회차 수정' })).not.toBeInTheDocument());
+    });
+
+    it('수정이 409로 실패하면 서버 detail을 Dialog 안에 그대로 보여 주고 열어 둔다 (D-38)', async () => {
+      actions.updateSession.mockRejectedValue(new AdminActionError('conflict', '확정자가 있는 회차는 정원을 바꿀 수 없습니다'));
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      const dialog = await screen.findByRole('dialog', { name: '회차 수정' });
+      await userEvent.click(within(dialog).getByRole('button', { name: '회차 저장' }));
+
+      expect(await within(dialog).findByText('확정자가 있는 회차는 정원을 바꿀 수 없습니다')).toBeInTheDocument();
+    });
+
+    it('수정 뒤 다시 읽기가 실패하면 갱신 실패 안내와 다시 시도를 보여 준다', async () => {
+      actions.updateSession.mockResolvedValue({});
+      refresh.mockResolvedValue(false);
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      await userEvent.click(await screen.findByRole('button', { name: '회차 저장' }));
+
+      expect(await screen.findByText('회차를 수정했지만 목록을 갱신하지 못했습니다')).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument();
+    });
+
+    it('수정이 conflict로 실패하면 서버 detail을 보이고 Dialog는 열어 둔 채 refresh한다', async () => {
+      actions.updateSession.mockRejectedValue(new AdminActionError('conflict', '다른 관리자가 먼저 바꿨습니다'));
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      const dialog = await screen.findByRole('dialog', { name: '회차 수정' });
+      await userEvent.click(within(dialog).getByRole('button', { name: '회차 저장' }));
+
+      expect(await within(dialog).findByText('다른 관리자가 먼저 바꿨습니다')).toBeInTheDocument();
+      await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('dialog', { name: '회차 수정' })).toBeInTheDocument();
+    });
+
+    it('요청 중에는 수정 Dialog의 버튼이 잠기고 Esc로 닫히지 않는다', async () => {
+      const { rerender } = renderAt('/admin/courses/3/edit');
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      const dialog = await screen.findByRole('dialog', { name: '회차 수정' });
+
+      vi.mocked(useAdminCourseActions).mockReturnValue({ ...actions, pending: true });
+      rerender(tree('/admin/courses/3/edit'));
+
+      expect(within(dialog).getByRole('button', { name: '회차 저장' })).toBeDisabled();
+      expect(within(dialog).getByRole('button', { name: '취소' })).toBeDisabled();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(screen.getByRole('dialog', { name: '회차 수정' })).toBeInTheDocument();
+    });
+
+    it('요청 중에는 마감 Dialog의 버튼이 잠기고 Esc로 닫히지 않는다', async () => {
+      const { rerender } = renderAt('/admin/courses/3/edit');
+      await userEvent.click(screen.getByRole('button', { name: '마감 2026-03-01 회차' }));
+      const dialog = await screen.findByRole('dialog', { name: '회차를 마감할까요?' });
+
+      vi.mocked(useAdminCourseActions).mockReturnValue({ ...actions, pending: true });
+      rerender(tree('/admin/courses/3/edit'));
+
+      expect(within(dialog).getByRole('button', { name: '마감 확정' })).toBeDisabled();
+      expect(within(dialog).getByRole('button', { name: '닫기' })).toBeDisabled();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(screen.getByRole('dialog', { name: '회차를 마감할까요?' })).toBeInTheDocument();
+    });
+
+    it('다른 과정으로 바뀌면 마감 표시와 Dialog 대상이 초기화된다', async () => {
+      actions.closeSession.mockResolvedValue({});
+      vi.mocked(useCourseDetail).mockImplementation((id) => ({
+        data: { ...detail, id: Number(id), title: '과정 ' + id },
+        loading: false,
+        notFound: false,
+        error: undefined,
+        refresh,
+      }));
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '마감 2026-03-01 회차' }));
+      await userEvent.click(await screen.findByRole('button', { name: '마감 확정' }));
+      await vi.waitFor(() => expect(screen.queryByRole('button', { name: '수정 2026-03-01 회차' })).not.toBeInTheDocument());
+
+      await userEvent.click(screen.getByText('다른 과정으로'));
+      // 같은 회차 id라도 다른 과정에서는 마감 표시가 남지 않는다
+      expect(await screen.findByRole('button', { name: '수정 2026-03-01 회차' })).toBeInTheDocument();
+    });
+
+    it('다른 과정으로 바뀌면 열린 수정 Dialog가 닫힌다', async () => {
+      vi.mocked(useCourseDetail).mockImplementation((id) => ({
+        data: { ...detail, id: Number(id), title: '과정 ' + id },
+        loading: false,
+        notFound: false,
+        error: undefined,
+        refresh,
+      }));
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '수정 2026-03-01 회차' }));
+      expect(await screen.findByRole('dialog', { name: '회차 수정' })).toBeInTheDocument();
+      fireEvent.click(screen.getByText('다른 과정으로'));
+
+      await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: '회차 수정' })).not.toBeInTheDocument());
+    });
+
+    it('마감은 확인 뒤에 closeSession을 부르고 refresh가 실패해도 마감으로 표시한다', async () => {
+      actions.closeSession.mockResolvedValue({});
+      refresh.mockResolvedValue(false);
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '마감 2026-03-01 회차' }));
+      expect(actions.closeSession).not.toHaveBeenCalled();
+      await userEvent.click(await screen.findByRole('button', { name: '마감 확정' }));
+
+      expect(actions.closeSession).toHaveBeenCalledWith(3, 9);
+      expect(await screen.findByText('회차를 마감했지만 목록을 갱신하지 못했습니다')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '수정 2026-03-01 회차' })).not.toBeInTheDocument();
+      expect(await screen.findByRole('cell', { name: '마감' })).toBeInTheDocument();
+    });
+
+    it('마감 실패는 서버 detail을 안내로 보여 준다', async () => {
+      actions.closeSession.mockRejectedValue(new AdminActionError('conflict', '이미 마감된 회차입니다'));
+      renderAt('/admin/courses/3/edit');
+
+      await userEvent.click(screen.getByRole('button', { name: '마감 2026-03-01 회차' }));
+      await userEvent.click(await screen.findByRole('button', { name: '마감 확정' }));
+
+      expect(await screen.findByText('이미 마감된 회차입니다')).toBeInTheDocument();
+    });
+
+    it('종료된 과정과 마감된 회차에는 수정·마감 버튼이 없다', () => {
+      mockDetail({ closed: true });
+      const { unmount } = renderAt('/admin/courses/3/edit');
+      expect(screen.queryByRole('button', { name: /^수정 .* 회차$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^마감 .* 회차$/ })).not.toBeInTheDocument();
+      unmount();
+
+      mockDetail({ sessions: [{ ...detail.sessions[0], closed: true }] });
+      renderAt('/admin/courses/3/edit');
+      expect(screen.queryByRole('button', { name: /^수정 .* 회차$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^마감 .* 회차$/ })).not.toBeInTheDocument();
+    });
   });
 });

@@ -7,6 +7,7 @@ import RequireAuth from './auth/RequireAuth';
 import CourseDetailPage from './pages/CourseDetailPage';
 import MyEnrollmentsPage from './enrollment/MyEnrollmentsPage';
 import CourseListPage from './pages/CourseListPage';
+import AdminCourseListPage from './pages/AdminCourseListPage';
 import CourseFormPage from './pages/CourseFormPage';
 import RosterPage from './enrollment/RosterPage';
 
@@ -26,8 +27,8 @@ function TopBar() {
           </Button>
         )}
         {user?.role === UserResponseRoleEnum.Admin && (
-          <Button color="inherit" component={RouterLink} to="/admin/courses/new">
-            과정 등록
+          <Button color="inherit" component={RouterLink} to="/admin/courses">
+            과정 관리
           </Button>
         )}
         <span style={{ flexGrow: 1 }} />
@@ -68,6 +69,14 @@ export default function App() {
           element={
             <RequireAuth>
               <MyEnrollmentsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/courses"
+          element={
+            <RequireAuth admin>
+              <AdminCourseListPage />
             </RequireAuth>
           }
         />

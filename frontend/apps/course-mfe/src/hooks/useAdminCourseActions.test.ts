@@ -9,6 +9,8 @@ vi.mock('../api/adminCourseApi', () => ({
     updateCourse: vi.fn(),
     closeCourse: vi.fn(),
     createSession: vi.fn(),
+    updateSession: vi.fn(),
+    closeSession: vi.fn(),
   },
 }));
 
@@ -45,6 +47,39 @@ describe('useAdminCourseActions', () => {
     expect(api.updateCourse).toHaveBeenCalledWith({ id: 2, courseRequest });
     expect(api.closeCourse).toHaveBeenCalledWith({ id: 3 });
     expect(api.createSession).toHaveBeenCalledWith({ id: 4, sessionRequest });
+    expect(result.current.pending).toBe(false);
+  });
+
+  it('회차 수정·마감은 성공하면 data를 돌려주고 올바른 인자로 부른다 (D-56)', async () => {
+    api.updateSession.mockResolvedValue({ data: { id: 5 } } as never);
+    api.closeSession.mockResolvedValue({ data: { id: 6 } } as never);
+    const { result } = renderHook(() => useAdminCourseActions());
+
+    await act(async () => {
+      expect(await result.current.updateSession(1, 5, sessionRequest)).toEqual({ id: 5 });
+      expect(await result.current.closeSession(1, 6)).toEqual({ id: 6 });
+    });
+
+    expect(api.updateSession).toHaveBeenCalledWith({ id: 1, sessionId: 5, sessionRequest });
+    expect(api.closeSession).toHaveBeenCalledWith({ id: 1, sessionId: 6 });
+    expect(result.current.pending).toBe(false);
+  });
+
+  it('회차 수정·마감의 409 오류는 kind와 detail을 담아 거부한다 (D-56)', async () => {
+    api.updateSession.mockRejectedValue(httpError(409, { detail: '정원이 확정 인원보다 작습니다' }));
+    api.closeSession.mockRejectedValue(httpError(409, { detail: '이미 마감된 회차입니다' }));
+    const { result } = renderHook(() => useAdminCourseActions());
+
+    await act(async () => {
+      await expect(result.current.updateSession(1, 5, sessionRequest)).rejects.toMatchObject({
+        kind: 'conflict',
+        detail: '정원이 확정 인원보다 작습니다',
+      });
+      await expect(result.current.closeSession(1, 6)).rejects.toMatchObject({
+        kind: 'conflict',
+        detail: '이미 마감된 회차입니다',
+      });
+    });
     expect(result.current.pending).toBe(false);
   });
 
