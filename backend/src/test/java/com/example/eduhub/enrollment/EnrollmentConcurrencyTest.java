@@ -128,7 +128,7 @@ class EnrollmentConcurrencyTest {
             .sorted()
             .toList();
     assertThat(waitingRanks)
-        .as("WAITING 응답의 waitingRank는 1~99로 중복 없음 (D-52)")
+        .as("WAITING 응답의 waitingRank는 1~99로 중복 없음 (D-53)")
         .containsExactlyElementsOf(LongStream.rangeClosed(1, 99).boxed().toList());
 
     assertThat(countByStatus(ids.sessionId(), "CONFIRMED")).isEqualTo(10);
@@ -223,7 +223,7 @@ class EnrollmentConcurrencyTest {
   }
 
   @Test
-  @DisplayName("확정 취소와 신규 신청이 섞여도 정원을 넘지 않고 confirmed_count가 어긋나지 않는다 (NFR-01, D-01, D-51)")
+  @DisplayName("확정 취소와 신규 신청이 섞여도 정원을 넘지 않고 confirmed_count가 어긋나지 않는다 (NFR-01, D-01, D-52)")
   void cancelAndEnrollConcurrently() throws Exception {
     String prefix = uniquePrefix();
     SessionIds ids = createSession(10, prefix);
@@ -265,7 +265,7 @@ class EnrollmentConcurrencyTest {
   }
 
   @Test
-  @DisplayName("같은 확정 신청을 10개 스레드가 동시에 취소하면 1건만 성공하고 승급도 정확히 1건이다 (NFR-01, D-51)")
+  @DisplayName("같은 확정 신청을 10개 스레드가 동시에 취소하면 1건만 성공하고 승급도 정확히 1건이다 (NFR-01, D-52)")
   void sameEnrollmentCancelledConcurrently() throws Exception {
     String prefix = uniquePrefix();
     SessionIds ids = createSession(3, prefix);
@@ -291,7 +291,7 @@ class EnrollmentConcurrencyTest {
   }
 
   @Test
-  @DisplayName("대기자 취소와 확정자 취소가 섞여도 confirmed_count·CONFIRMED 수·대기 키가 맞다 (NFR-01, D-01, D-51)")
+  @DisplayName("대기자 취소와 확정자 취소가 섞여도 confirmed_count·CONFIRMED 수·대기 키가 맞다 (NFR-01, D-01, D-52)")
   void mixedWaitingAndConfirmedCancel() throws Exception {
     String prefix = uniquePrefix();
     SessionIds ids = createSession(5, prefix);

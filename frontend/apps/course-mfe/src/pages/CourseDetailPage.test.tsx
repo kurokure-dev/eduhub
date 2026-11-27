@@ -82,7 +82,7 @@ describe('CourseDetailPage', () => {
     ],
   };
 
-  it('관리자는 admin 옵션으로 조회하고 과정 수정·명단 링크와 마감 표시를 본다 (D-53)', () => {
+  it('관리자는 admin 옵션으로 조회하고 과정 수정·명단 링크와 마감 표시를 본다 (D-54)', () => {
     loginAs('ADMIN');
     mockedUseCourseDetail.mockReturnValue({ ...base, data: adminData });
 
@@ -151,7 +151,7 @@ describe('CourseDetailPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('과정 정보를 불러오지 못했습니다');
   });
 
-  it('로그인 확인 중에는 로딩을 보이고 조회를 보류한다 (D-53)', () => {
+  it('로그인 확인 중에는 로딩을 보이고 조회를 보류한다 (D-54)', () => {
     mockedUseAuth.mockReturnValue({ user: null, initializing: true, expired: false, login: vi.fn(), logout: vi.fn() });
     mockedUseCourseDetail.mockReturnValue({ ...base, loading: true });
 

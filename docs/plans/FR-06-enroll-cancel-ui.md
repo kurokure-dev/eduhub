@@ -2,7 +2,7 @@
 
 - 설계명세: `docs/design/FR-06-enroll-cancel-ui.md` (작업별 세부 내용은 설계명세의 "작업 1~4" 절)
 - 브랜치: `feature/fr-06-enroll-cancel-ui`
-- 결정 사항: D-50, D-51, D-52, D-53 (그 밖에 D-01, D-02, D-29, D-39, D-45, D-46)
+- 결정 사항: D-51, D-52, D-53, D-54 (그 밖에 D-01, D-02, D-29, D-39, D-45, D-46)
 - 진행: 작업마다 implementer가 구현하고 reviewer가 검토한다. 심각·경고는 implementer가 고치고, 수정·재검토는 최대 2회까지 한다. 모든 작업이 끝나면 critical-reviewer가 최종 검토한다
 - 규모 알림 (CLAUDE.md 개발 절차 5): 백엔드 도메인~컨트롤러와 프론트 API·훅·화면에 걸친다. 개발자가 계획 승인으로 진행을 지시했다
 

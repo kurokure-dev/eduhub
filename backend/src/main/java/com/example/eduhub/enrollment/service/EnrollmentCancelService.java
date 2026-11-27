@@ -9,7 +9,7 @@ import com.example.eduhub.enrollment.repository.EnrollmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 신청 취소와 대기 1순위 승급 (FR-06, D-01, D-51). 회차 행 락 아래에서 처리한다 (D-29). 마감된 회차는 취소할 수 없다 (D-02). */
+/** 신청 취소와 대기 1순위 승급 (FR-06, D-01, D-52). 회차 행 락 아래에서 처리한다 (D-29). 마감된 회차는 취소할 수 없다 (D-02). */
 @Service
 @Transactional
 public class EnrollmentCancelService {

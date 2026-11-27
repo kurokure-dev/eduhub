@@ -4,7 +4,7 @@ import { adminCourseApi } from '../api/adminCourseApi';
 import { courseApi } from '../api/courseApi';
 import { httpStatusOf } from './httpStatus';
 
-/** 공개·관리자 응답을 하나로 맞춘 회차 (FR-06, D-53) */
+/** 공개·관리자 응답을 하나로 맞춘 회차 (FR-06, D-54) */
 export interface SessionView {
   id: number;
   startDate: string;
@@ -14,7 +14,7 @@ export interface SessionView {
   closed: boolean;
 }
 
-/** 공개·관리자 응답을 하나로 맞춘 과정 상세 (FR-06, D-53) */
+/** 공개·관리자 응답을 하나로 맞춘 과정 상세 (FR-06, D-54) */
 export interface CourseDetailView {
   id: number;
   title: string;
@@ -71,13 +71,13 @@ function fromAdmin(d: AdminCourseDetailResponse): CourseDetailView {
 
 /**
  * 과정 상세와 회차 조회 (FR-02, FR-06).
- * admin이면 종료된 과정·회차도 보이는 관리자 API(D-53)를, 아니면 공개 API를 부른다.
+ * admin이면 종료된 과정·회차도 보이는 관리자 API(D-54)를, 아니면 공개 API를 부른다.
  * 없거나 잘못된 id는 error가 아니라 notFound로 알린다 (D-24, D-28).
  * refresh()는 로딩 표시 없이 다시 조회해 데이터만 바꾼다 (신청 뒤 남은 자리 갱신)
  */
 export function useCourseDetail(id: string | undefined, options?: { admin?: boolean; enabled?: boolean }) {
   const admin = options?.admin ?? false;
-  // enabled=false면 조회를 보류하고 로딩으로 둔다 (로그인 확인 중 관리자 여부가 정해지기 전, D-53)
+  // enabled=false면 조회를 보류하고 로딩으로 둔다 (로그인 확인 중 관리자 여부가 정해지기 전, D-54)
   const enabled = options?.enabled ?? true;
   const courseId = parseCourseId(id);
   const [data, setData] = useState<CourseDetailView>();

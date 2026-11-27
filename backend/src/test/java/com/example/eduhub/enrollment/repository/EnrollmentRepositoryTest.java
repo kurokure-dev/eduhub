@@ -224,7 +224,7 @@ class EnrollmentRepositoryTest {
   }
 
   @Test
-  @DisplayName("R9 countBySessionIdAndStatus는 다른 회차·다른 상태를 세지 않는다 (D-52)")
+  @DisplayName("R9 countBySessionIdAndStatus는 다른 회차·다른 상태를 세지 않는다 (D-53)")
   void countBySessionAndStatus() {
     Course course =
         courseRepository.save(
@@ -253,7 +253,7 @@ class EnrollmentRepositoryTest {
   }
 
   @Test
-  @DisplayName("R10 확정 취소 → 승급이 실제 DB의 CHECK·유일 제약을 통과한다 (D-01, D-46, D-51)")
+  @DisplayName("R10 확정 취소 → 승급이 실제 DB의 CHECK·유일 제약을 통과한다 (D-01, D-46, D-52)")
   void cancelConfirmedPromotesWithRealConstraints() {
     String s = employeeA.substring(1);
     session.occupySeat();

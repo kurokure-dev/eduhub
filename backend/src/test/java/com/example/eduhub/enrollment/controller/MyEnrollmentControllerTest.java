@@ -115,7 +115,7 @@ class MyEnrollmentControllerTest {
   }
 
   @Test
-  @DisplayName("C5 취소는 200이고 토큰의 사번으로 서비스를 부른다 (D-51)")
+  @DisplayName("C5 취소는 200이고 토큰의 사번으로 서비스를 부른다 (D-52)")
   void cancelReturnsOk() throws Exception {
     given(cancelService.cancel(7L, "E1"))
         .willReturn(new EnrollmentResponse(7L, 3L, "E1", EnrollmentStatus.CANCELLED, null, NOW));

@@ -44,7 +44,7 @@ class EnrollmentTest {
   }
 
   @Test
-  @DisplayName("cancel()은 CONFIRMED를 CANCELLED로 바꾼다 (D-51)")
+  @DisplayName("cancel()은 CONFIRMED를 CANCELLED로 바꾼다 (D-52)")
   void cancelConfirmed() {
     Enrollment e = Enrollment.confirmed(null, "E001", T0);
 
@@ -55,7 +55,7 @@ class EnrollmentTest {
   }
 
   @Test
-  @DisplayName("cancel()은 WAITING을 CANCELLED로 바꾸고 대기 키를 비운다 (D-46, D-51)")
+  @DisplayName("cancel()은 WAITING을 CANCELLED로 바꾸고 대기 키를 비운다 (D-46, D-52)")
   void cancelWaitingClearsOrder() {
     Enrollment e = Enrollment.waiting(null, "E001", T0, 3L);
 
@@ -66,7 +66,7 @@ class EnrollmentTest {
   }
 
   @Test
-  @DisplayName("cancel()은 COMPLETED·CANCELLED이면 IllegalStateException이다 (D-51)")
+  @DisplayName("cancel()은 COMPLETED·CANCELLED이면 IllegalStateException이다 (D-52)")
   void cancelNotAllowedStatuses() {
     Enrollment completed = Enrollment.confirmed(null, "E001", T0);
     completed.complete();

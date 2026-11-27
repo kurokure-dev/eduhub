@@ -19,7 +19,7 @@ describe('useEnroll', () => {
     enrollMock.mockReset();
   });
 
-  it('성공하면 상태와 대기 순번을 돌려준다 (D-52)', async () => {
+  it('성공하면 상태와 대기 순번을 돌려준다 (D-53)', async () => {
     enrollMock.mockResolvedValue({ data: { id: 1, status: 'WAITING', waitingRank: 3 } } as Result);
     const { result } = renderHook(() => useEnroll());
 

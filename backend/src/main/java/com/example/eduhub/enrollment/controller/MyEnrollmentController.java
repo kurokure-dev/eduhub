@@ -66,7 +66,7 @@ public class MyEnrollmentController {
   @Operation(
       summary = "내 신청 취소",
       description =
-          "확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51)."
+          "확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-52)."
               + " 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45)."
               + " 마감된 회차의 신청은 취소할 수 없다 (D-02).")
   @ApiResponse(responseCode = "200", description = "취소됨 (status=CANCELLED, waitingRank=null)")

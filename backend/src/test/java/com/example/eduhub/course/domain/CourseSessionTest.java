@@ -29,7 +29,7 @@ class CourseSessionTest {
   }
 
   @Test
-  @DisplayName("E1b releaseSeat는 확정 인원을 줄이고, 0이면 예외다 (D-51)")
+  @DisplayName("E1b releaseSeat는 확정 인원을 줄이고, 0이면 예외다 (D-52)")
   void releaseSeat() {
     CourseSession session = session(2);
     session.occupySeat();

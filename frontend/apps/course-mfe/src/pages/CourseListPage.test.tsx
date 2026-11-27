@@ -108,7 +108,7 @@ describe('CourseListPage', () => {
     expect(within(listbox).getByRole('option', { name: '리더십' })).toBeInTheDocument();
   });
 
-  it('과정 제목은 상세 링크다 (D-50)', () => {
+  it('과정 제목은 상세 링크다 (D-51)', () => {
     mockedUseCourses.mockReturnValue({
       data: { content: [{ id: 7, title: 'Spring 입문', category: '개발' }], page: 0, size: 10, totalElements: 1 },
       loading: false,
@@ -120,7 +120,7 @@ describe('CourseListPage', () => {
     expect(screen.getByRole('link', { name: 'Spring 입문' })).toHaveAttribute('href', '/courses/7');
   });
 
-  it('행의 아무 곳이나 누르면 상세로 이동한다 (D-50)', async () => {
+  it('행의 아무 곳이나 누르면 상세로 이동한다 (D-51)', async () => {
     mockedUseCourses.mockReturnValue({
       data: { content: [{ id: 7, title: 'Spring 입문', category: '개발' }], page: 0, size: 10, totalElements: 1 },
       loading: false,
@@ -133,7 +133,7 @@ describe('CourseListPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/courses/7');
   });
 
-  it('제목 링크를 눌러도 이동은 한 번만 일어난다 (D-50)', async () => {
+  it('제목 링크를 눌러도 이동은 한 번만 일어난다 (D-51)', async () => {
     mockedUseCourses.mockReturnValue({
       data: { content: [{ id: 7, title: 'Spring 입문', category: '개발' }], page: 0, size: 10, totalElements: 1 },
       loading: false,
@@ -149,7 +149,7 @@ describe('CourseListPage', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('Ctrl 클릭이나 텍스트 선택 중에는 행 클릭으로 이동하지 않는다 (D-50)', async () => {
+  it('Ctrl 클릭이나 텍스트 선택 중에는 행 클릭으로 이동하지 않는다 (D-51)', async () => {
     mockedUseCourses.mockReturnValue({
       data: { content: [{ id: 7, title: 'Spring 입문', category: '개발' }], page: 0, size: 10, totalElements: 1 },
       loading: false,

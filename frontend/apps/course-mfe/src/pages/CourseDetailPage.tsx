@@ -26,7 +26,7 @@ import { useCourseDetail } from '../hooks/useCourseDetail';
 export default function CourseDetailPage() {
   const { courseId } = useParams();
   const { user, initializing } = useAuth();
-  // D-53: 관리자는 종료된 과정·회차도 보는 관리자 API를 쓴다
+  // D-54: 관리자는 종료된 과정·회차도 보는 관리자 API를 쓴다
   const admin = user?.role === UserResponseRoleEnum.Admin;
   const { data, loading, notFound, error, refresh } = useCourseDetail(courseId, { admin, enabled: !initializing });
   const columns = admin ? 5 : 4;

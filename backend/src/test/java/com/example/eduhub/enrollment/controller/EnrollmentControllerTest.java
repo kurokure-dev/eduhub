@@ -47,7 +47,7 @@ class EnrollmentControllerTest {
   }
 
   @Test
-  @DisplayName("C1 확정과 대기 모두 201이고 대기일 때만 waitingRank가 있다 (D-52)")
+  @DisplayName("C1 확정과 대기 모두 201이고 대기일 때만 waitingRank가 있다 (D-53)")
   void enrollReturnsCreated() throws Exception {
     given(enrollmentService.enroll(3L, "E1"))
         .willReturn(new EnrollmentResponse(1L, 3L, "E1", EnrollmentStatus.CONFIRMED, null, NOW));

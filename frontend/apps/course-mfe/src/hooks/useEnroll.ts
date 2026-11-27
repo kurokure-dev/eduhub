@@ -5,7 +5,7 @@ import { failureKindOf, type FailureKind } from './httpStatus';
 
 export interface EnrollResult {
   status: EnrollmentResponseStatusEnum | undefined;
-  /** 대기일 때만 값이 있다 (D-52) */
+  /** 대기일 때만 값이 있다 (D-53) */
   waitingRank: number | null | undefined;
 }
 
@@ -19,7 +19,7 @@ export class EnrollError extends Error {
   }
 }
 
-/** 회차 신청 (FR-06, D-51). 성공이면 확정·대기 결과를 돌려주고, 실패면 EnrollError를 던진다 */
+/** 회차 신청 (FR-06, D-52). 성공이면 확정·대기 결과를 돌려주고, 실패면 EnrollError를 던진다 */
 export function useEnroll() {
   const [pending, setPending] = useState(false);
   // 호출이 겹쳐도 먼저 끝난 쪽이 pending을 끄지 않도록 진행 중 호출 수를 센다

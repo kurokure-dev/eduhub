@@ -156,20 +156,20 @@ export default function CourseListPage() {
                   </TableRow>
                 ) : (
                   rows.map((course) => (
-                    // D-50: 행 전체를 눌러 상세로 간다
+                    // D-51: 행 전체를 눌러 상세로 간다
                     <TableRow
                       key={course.id}
                       hover
                       sx={{ cursor: 'pointer' }}
                       onClick={(event) => {
-                        // 새 탭 열기 같은 보조 클릭이나 텍스트 선택 중에는 이동하지 않는다 (D-50)
+                        // 새 탭 열기 같은 보조 클릭이나 텍스트 선택 중에는 이동하지 않는다 (D-51)
                         if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
                         if (window.getSelection()?.toString()) return;
                         navigate(`/courses/${course.id}`);
                       }}
                     >
                       <TableCell>
-                        {/* 제목 링크는 유지하되 행 클릭과 겹쳐 이동하지 않게 전파를 막는다 (D-50) */}
+                        {/* 제목 링크는 유지하되 행 클릭과 겹쳐 이동하지 않게 전파를 막는다 (D-51) */}
                         <Link
                           component={RouterLink}
                           to={`/courses/${course.id}`}

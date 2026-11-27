@@ -21,7 +21,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
   /** 회차의 지정한 사번들의 신청 전부 (취소 포함). 수료 처리용 (D-48). */
   List<Enrollment> findBySessionIdAndEmployeeIdIn(Long sessionId, Collection<String> employeeIds);
 
-  /** 본인 신청의 회차 id만 읽는다. 락 전에 엔티티를 영속성 컨텍스트에 올리지 않기 위한 투영 쿼리다 (D-51, D-45). */
+  /** 본인 신청의 회차 id만 읽는다. 락 전에 엔티티를 영속성 컨텍스트에 올리지 않기 위한 투영 쿼리다 (D-52, D-45). */
   @Query("select e.session.id from Enrollment e where e.id = :id and e.employeeId = :employeeNo")
   Optional<Long> findSessionIdByIdAndEmployeeId(
       @Param("id") Long id, @Param("employeeNo") String employeeNo);

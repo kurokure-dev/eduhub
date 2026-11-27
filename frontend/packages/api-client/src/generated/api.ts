@@ -136,7 +136,7 @@ export interface EnrollmentResponse {
     'employeeId'?: string;
     'status'?: EnrollmentResponseStatusEnum;
     /**
-     * 대기 순번. 상태가 WAITING일 때만 값이 있다 (D-52)
+     * 대기 순번. 상태가 WAITING일 때만 값이 있다 (D-53)
      */
     'waitingRank'?: number | null;
     'appliedAt'?: string;
@@ -1825,7 +1825,7 @@ export class CourseApi extends BaseAPI {
 export const EnrollmentApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-52). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
          * @summary 내 신청 취소
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
@@ -1949,7 +1949,7 @@ export const EnrollmentApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = EnrollmentApiAxiosParamCreator(configuration)
     return {
         /**
-         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-52). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
          * @summary 내 신청 취소
          * @param {number} enrollmentId 
          * @param {*} [options] Override http request option.
@@ -1997,7 +1997,7 @@ export const EnrollmentApiFactory = function (configuration?: Configuration, bas
     const localVarFp = EnrollmentApiFp(configuration)
     return {
         /**
-         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+         * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-52). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
          * @summary 내 신청 취소
          * @param {EnrollmentApiCancelRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
@@ -2058,7 +2058,7 @@ export interface EnrollmentApiFindMineRequest {
  */
 export class EnrollmentApi extends BaseAPI {
     /**
-     * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-51). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
+     * 확정·대기 신청을 취소한다. 확정을 취소하면 대기 1순위가 확정으로 승급한다 (D-01, D-52). 본인 신청만 취소할 수 있고 남의 신청은 없는 신청처럼 404다 (D-45). 마감된 회차의 신청은 취소할 수 없다 (D-02).
      * @summary 내 신청 취소
      * @param {EnrollmentApiCancelRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.

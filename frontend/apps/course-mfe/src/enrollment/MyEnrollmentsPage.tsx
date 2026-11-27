@@ -58,7 +58,7 @@ export default function MyEnrollmentsPage() {
   const handleConfirm = async () => {
     if (!target || target.enrollmentId === undefined) return;
     const enrollmentId = target.enrollmentId;
-    // 요청이 끝날 때까지 대화상자를 열어 두어 같은 행을 다시 취소하지 못하게 한다 (D-51)
+    // 요청이 끝날 때까지 대화상자를 열어 두어 같은 행을 다시 취소하지 못하게 한다 (D-52)
     try {
       await cancel(enrollmentId);
       setNotice({ severity: 'success', text: '신청이 취소되었습니다' });

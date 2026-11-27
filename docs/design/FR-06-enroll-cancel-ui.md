@@ -8,28 +8,28 @@ course-mfe에 신청 기능을 붙인다. 수강생이 과정 상세에서 회�
 | 확인한 사실 | 결정 |
 |---|---|
 | 백엔드에 취소 API(FR-06)가 없다 (`EnrollmentApi`는 `enroll`, `findMine`뿐) | **이번에 취소 API를 백엔드도 같이 만든다** |
-| D-26: "행 전체 클릭은 쓰지 않는다" | 행 클릭으로 바꾸고 **D-50**으로 D-26을 대체한다 |
+| D-26: "행 전체 클릭은 쓰지 않는다" | 행 클릭으로 바꾸고 **D-51**으로 D-26을 대체한다 |
 | 공개 상세는 종료 과정을 404로 주고(D-20) 상태 필드가 없다 | **관리자만** `AdminCourseApi.getAdminCourse`로 상태를 받아 "종료"를 표시한다. 일반 사용자는 지금처럼 404 안내 |
 | "6-2 확인 표"가 저장소에 없다 | 아래 "브라우저 확인 표 1~6"을 설계명세에 적고 그것으로 검증한다 |
-| 신청 응답(`EnrollmentResponse`)에 대기 순번이 없다 | 백엔드를 여는 김에 응답에 `waitingRank`(대기일 때만)를 더한다 (**D-52**). 화면이 다시 조회하지 않아도 "대기 N번"을 보여 줄 수 있다 |
+| 신청 응답(`EnrollmentResponse`)에 대기 순번이 없다 | 백엔드를 여는 김에 응답에 `waitingRank`(대기일 때만)를 더한다 (**D-53**). 화면이 다시 조회하지 않아도 "대기 N번"을 보여 줄 수 있다 |
 
 - 요구사항: FR-04(화면), FR-06, FR-07(화면), NFR-03
-- 결정 사항: D-50~D-53 (이번에 추가), D-01, D-02, D-29, D-39, D-45, D-46
+- 결정 사항: D-51~D-54 (이번에 추가), D-01, D-02, D-29, D-39, D-45, D-46
 - 브랜치: `feature/fr-06-enroll-cancel-ui`
 
 ## 진행 절차
 
 1. 브랜치: 로그인 커밋(4e902d7)이 아직 main에 없으므로 현재 브랜치에서 `feature/fr-06-enroll-cancel-ui`를 딴다
-2. 이 계획을 `docs/design/FR-06-enroll-cancel-ui.md`(설계명세)와 `docs/plans/FR-06-enroll-cancel-ui.md`(작업 목록)로 옮기고, `docs/requirements.md`에 D-50~D-53 추가, D-26·D-41 갱신
+2. 이 계획을 `docs/design/FR-06-enroll-cancel-ui.md`(설계명세)와 `docs/plans/FR-06-enroll-cancel-ui.md`(작업 목록)로 옮기고, `docs/requirements.md`에 D-51~D-54 추가, D-26·D-41 갱신
 3. 작업마다 implementer → reviewer (심각·경고는 수정, 최대 2회), 끝나면 critical-reviewer
 4. 백엔드 작업은 `eduhub-api` 스킬 절차를 따른다
 
 ## 결정 사항 (추가)
 
-- **D-50 상세로 이동**: 목록 행 전체를 누르면 `/courses/{id}`로 간다(useNavigate). 제목 링크는 키보드·새 탭용으로 남긴다 (D-26 대체)
-- **D-51 신청 취소**: `POST /api/me/enrollments/{enrollmentId}/cancel`. 본인 신청만(남의 신청·없는 신청 404, D-45). 확정·대기만 취소, 수료·취소 상태는 409. 마감된 회차는 409(D-02). 회차 행 락 아래에서 처리(D-29). 확정 취소면 자리를 비우고 대기 1순위(`waiting_order` 최소)를 확정으로 승급(FR-06). 대기에서 벗어나는 행은 `waiting_order`를 NULL로(D-46). 뒷순번은 조회 때 계산하므로 자동으로 당겨진다(D-01, D-39). 정원 증감 승급·강등(D-05, D-06), 마감 시 대기 자동 취소(D-04), D-38 해제는 이번 범위가 아니다
-- **D-52 신청 응답의 대기 순번**: `EnrollmentResponse`에 `waitingRank`(WAITING일 때만, 아니면 null)를 둔다. 새 대기는 키가 회차 최대값이므로 순번 = 회차의 대기 수 (FR-05의 응답 부분을 앞당김. 강등 키는 FR-05에 남김)
-- **D-53 course-mfe의 관리자 표시**: 관리자가 과정 상세를 열면 관리자 상세 API로 조회해 과정 "종료" 칩과 마감 회차를 보여 주고, 종료 과정·마감 회차에는 신청 버튼을 두지 않는다. "과정 수정"(`/admin/courses/{id}/edit`), 회차별 "명단"(`/admin/sessions/{sessionId}/roster`) 링크는 Step 16 전까지 "준비 중" 화면으로 간다
+- **D-51 상세로 이동**: 목록 행 전체를 누르면 `/courses/{id}`로 간다(useNavigate). 제목 링크는 키보드·새 탭용으로 남긴다 (D-26 대체)
+- **D-52 신청 취소**: `POST /api/me/enrollments/{enrollmentId}/cancel`. 본인 신청만(남의 신청·없는 신청 404, D-45). 확정·대기만 취소, 수료·취소 상태는 409. 마감된 회차는 409(D-02). 회차 행 락 아래에서 처리(D-29). 확정 취소면 자리를 비우고 대기 1순위(`waiting_order` 최소)를 확정으로 승급(FR-06). 대기에서 벗어나는 행은 `waiting_order`를 NULL로(D-46). 뒷순번은 조회 때 계산하므로 자동으로 당겨진다(D-01, D-39). 정원 증감 승급·강등(D-05, D-06), 마감 시 대기 자동 취소(D-04), D-38 해제는 이번 범위가 아니다
+- **D-53 신청 응답의 대기 순번**: `EnrollmentResponse`에 `waitingRank`(WAITING일 때만, 아니면 null)를 둔다. 새 대기는 키가 회차 최대값이므로 순번 = 회차의 대기 수 (FR-05의 응답 부분을 앞당김. 강등 키는 FR-05에 남김)
+- **D-54 course-mfe의 관리자 표시**: 관리자가 과정 상세를 열면 관리자 상세 API로 조회해 과정 "종료" 칩과 마감 회차를 보여 주고, 종료 과정·마감 회차에는 신청 버튼을 두지 않는다. "과정 수정"(`/admin/courses/{id}/edit`), 회차별 "명단"(`/admin/sessions/{sessionId}/roster`) 링크는 Step 16 전까지 "준비 중" 화면으로 간다
 - D-41: 취소가 생겼으므로 배포 제한 사유를 "D-38(정원 변경)만 남음"으로 갱신
 
 ## 작업 1 — 백엔드 취소 API + 신청 응답 순번
@@ -40,7 +40,7 @@ course-mfe에 신청 기능을 붙인다. 수강생이 과정 상세에서 회�
 - `course/domain/CourseSession.java`: `releaseSeat()` (`confirmedCount--`, 0 미만 방지). `occupySeat()`와 짝
 - `enrollment/repository/EnrollmentRepository.java`:
   - `findSessionIdByIdAndEmployeeId(id, employeeNo)` — 엔티티를 읽지 않는 투영 쿼리. 락 전에 회차 엔티티를 영속성 컨텍스트에 올리지 않기 위해서다 (`EnrollmentService.enroll`의 주의 주석과 같은 이유)
-  - `findFirstBySessionIdAndStatusOrderByWaitingOrderAsc` (승급 대상), `countBySessionIdAndStatus` (D-52)
+  - `findFirstBySessionIdAndStatusOrderByWaitingOrderAsc` (승급 대상), `countBySessionIdAndStatus` (D-53)
 - `enrollment/service/EnrollmentCancelService.java`(신규): 회차 id 조회(없으면 `NotFoundException`) → `SessionLockService.lock` → 신청 로드 → 회차 마감이면 409, 상태 검사 409 → 취소 → 확정이었으면 `releaseSeat` 후 대기 1순위 있으면 `promote` + `occupySeat`
 - 예외: 기존 `ConflictException`/`NotFoundException` 하위 클래스로 (`SessionClosedException` 재사용 검토, `EnrollmentNotCancellableException` 신규)
 - `enrollment/controller/MyEnrollmentController.java`: `POST /{enrollmentId}/cancel` → 200 `EnrollmentResponse`, OpenAPI 응답 401/404/409 문서화. 경로가 `/api/me/**`라 SecurityConfig 변경 없음(D-43)

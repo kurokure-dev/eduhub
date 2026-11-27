@@ -24,7 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-// 신청 취소와 승급 (FR-06, D-01, D-02, D-45, D-51)
+// 신청 취소와 승급 (FR-06, D-01, D-02, D-45, D-52)
 @ExtendWith(MockitoExtension.class)
 class EnrollmentCancelServiceTest {
 
@@ -62,7 +62,7 @@ class EnrollmentCancelServiceTest {
   }
 
   @Test
-  @DisplayName("확정 취소는 자리를 비우고 대기 1순위를 승급한다 (D-01, D-51)")
+  @DisplayName("확정 취소는 자리를 비우고 대기 1순위를 승급한다 (D-01, D-52)")
   void confirmedCancelPromotesFirstWaiting() {
     CourseSession s = session(2, 2);
     Enrollment mine = withSession(Enrollment.confirmed(s, "E1", T0), s);
@@ -130,7 +130,7 @@ class EnrollmentCancelServiceTest {
   }
 
   @Test
-  @DisplayName("수료한 신청은 409다 (D-51)")
+  @DisplayName("수료한 신청은 409다 (D-52)")
   void completedIs409() {
     CourseSession s = session(2, 1);
     Enrollment e = withSession(Enrollment.confirmed(s, "E1", T0), s);
@@ -143,7 +143,7 @@ class EnrollmentCancelServiceTest {
   }
 
   @Test
-  @DisplayName("이미 취소한 신청은 409다 (D-51)")
+  @DisplayName("이미 취소한 신청은 409다 (D-52)")
   void alreadyCancelledIs409() {
     CourseSession s = session(2, 0);
     Enrollment e = withSession(Enrollment.confirmed(s, "E1", T0), s);

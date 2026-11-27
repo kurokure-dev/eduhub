@@ -108,7 +108,7 @@ describe('useCourseDetail', () => {
     expect(getDetail).toHaveBeenLastCalledWith({ id: 2 });
   });
 
-  it('admin이면 관리자 API를 부르고 status와 남은 자리를 공통 모양으로 맞춘다 (D-53)', async () => {
+  it('admin이면 관리자 API를 부르고 status와 남은 자리를 공통 모양으로 맞춘다 (D-54)', async () => {
     getAdminCourse.mockResolvedValue({
       data: {
         id: 1,
@@ -232,7 +232,7 @@ describe('useCourseDetail', () => {
     expect(result.current.error).toBeUndefined();
   });
 
-  it('enabled가 false면 조회하지 않고 로딩으로 두며, true가 되면 조회한다 (D-53)', async () => {
+  it('enabled가 false면 조회하지 않고 로딩으로 두며, true가 되면 조회한다 (D-54)', async () => {
     getDetail.mockResolvedValue({ data: detail } as DetailResult);
 
     const { result, rerender } = renderHook(({ enabled }) => useCourseDetail('1', { enabled }), {
